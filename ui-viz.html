@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Remote VCS Manager — UI Visualizer</title>
+<style>
+/* ── JetBrains Design Token System (simulated) ──────── */
+:root {
+  /* Light theme (IntelliJ Light) */
+  --jb-bg: #F2F2F2;
+  --jb-surface: #FFFFFF;
+  --jb-surface-elevated: #FAFAFA;
+  --jb-text: #000000;
+  --jb-text-secondary: #6C707E;
+  --jb-text-disabled: #B0B0B0;
+  --jb-border: #C9C9C9;
+  --jb-border-light: #DEDEDE;
+  --jb-selection-bg: #2675BF;
+  --jb-selection-fg: #FFFFFF;
+  --jb-hover-bg: #E8E8E8;
+  --jb-link: #2470B3;
+  --jb-error: #E00000;
+  --jb-input-bg: #FFFFFF;
+  --jb-input-border: #B0B0B0;
+  --jb-accent: #2675BF;
+  --jb-badge-open-bg: rgba(45,164,78,0.12);
+  --jb-badge-open-fg: #1A7F37;
+  --jb-badge-open-border: rgba(45,164,78,0.35);
+  --jb-badge-closed-bg: rgba(137,87,229,0.12);
+  --jb-badge-closed-fg: #8250DF;
+  --jb-badge-closed-border: rgba(137,87,229,0.35);
+  --jb-badge-merged-bg: rgba(137,87,229,0.12);
+  --jb-badge-merged-fg: #8250DF;
+  --jb-badge-merged-border: rgba(137,87,229,0.35);
+  --jb-badge-draft-bg: rgba(101,109,118,0.12);
+  --jb-badge-draft-fg: #656D76;
+  --jb-badge-draft-border: rgba(101,109,118,0.35);
+  --jb-toolwindow-bg: #F2F2F2;
+  --jb-toolwindow-header: #DCDCDC;
+  --jb-tab-active-border: #2675BF;
+  --jb-divider: #C9C9C9;
+  --jb-green: #1A7F37;
+  --jb-red: #CF222E;
+  --jb-purple: #8250DF;
+
+  --space-1: 2px; --space-2: 4px; --space-3: 6px; --space-4: 8px;
+  --space-5: 12px; --space-6: 16px; --space-7: 20px; --space-8: 24px;
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 9px; --radius-pill: 999px;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-code: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-size: 13px;
+  --font-small: 11px;
+  --font-mono: 11px;
+}
+
+/* ── Dark theme (Darcula) ──────────────────────────── */
+.darcula {
+  --jb-bg: #2B2D30;
+  --jb-surface: #1E1F22;
+  --jb-surface-elevated: #313335;
+  --jb-text: #DFE1E5;
+  --jb-text-secondary: #6C707E;
+  --jb-text-disabled: #555;
+  --jb-border: #43454A;
+  --jb-border-light: #3C3E42;
+  --jb-selection-bg: #2F65CA;
+  --jb-selection-fg: #FFFFFF;
+  --jb-hover-bg: #37393D;
+  --jb-link: #548AF7;
+  --jb-error: #FF5261;
+  --jb-input-bg: #313335;
+  --jb-input-border: #555;
+  --jb-accent: #548AF7;
+  --jb-badge-open-bg: rgba(63,185,80,0.15);
+  --jb-badge-open-fg: #3FB950;
+  --jb-badge-open-border: rgba(63,185,80,0.40);
+  --jb-badge-closed-bg: rgba(137,87,229,0.15);
+  --jb-badge-closed-fg: #BC8CFF;
+  --jb-badge-closed-border: rgba(137,87,229,0.40);
+  --jb-badge-merged-bg: rgba(137,87,229,0.15);
+  --jb-badge-merged-fg: #BC8CFF;
+  --jb-badge-merged-border: rgba(137,87,229,0.40);
+  --jb-badge-draft-bg: rgba(132,141,151,0.15);
+  --jb-badge-draft-fg: #848D97;
+  --jb-badge-draft-border: rgba(132,141,151,0.40);
+  --jb-toolwindow-bg: #2B2D30;
+  --jb-toolwindow-header: #3C3E42;
+  --jb-tab-active-border: #548AF7;
+  --jb-divider: #43454A;
+  --jb-green: #3FB950;
+  --jb-red: #F85149;
+  --jb-purple: #D2A8FF;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size);
+  background: #1a1a1e;
+  color: var(--jb-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* ── Controls ──────────────────────────────────────── */
+.controls {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: #0F0F12;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  border-bottom: 1px solid #333;
+}
+.controls label {
+  color: #aaa;
+  font-size: 12px;
+}
+.controls button {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background .1s;
+}
+.controls button:hover { background: #444; }
+.controls button.active { background: var(--jb-accent); border-color: var(--jb-accent); }
+
+/* ── Viewport ──────────────────────────────────────── */
+.viewport {
+  display: flex;
+  gap: 32px;
+  margin-top: 50px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── IDE Shell ──────────────────────────────────────── */
+.ide-shell {
+  width: 540px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--jb-toolwindow-bg);
+  border: 1px solid var(--jb-border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  position: relative;
+}
+
+/* Title bar */
+.ide-titlebar {
+  height: 28px;
+  background: var(--jb-surface);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 6px;
+  border-bottom: 1px solid var(--jb-border);
+}
+.ide-titlebar .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.ide-titlebar .label {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+  margin-left: auto;
+  letter-spacing: 0.3px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--jb-border);
+  background: var(--jb-bg);
+  gap: 2px;
+  min-height: 28px;
+}
+.toolbar button {
+  background: none; border: none; cursor: pointer;
+  padding: 2px 4px; border-radius: 3px;
+  color: var(--jb-text-secondary);
+  font-size: 14px;
+  display: flex; align-items: center; gap: 2px;
+}
+.toolbar button:hover { background: var(--jb-hover-bg); color: var(--jb-text); }
+.toolbar .sep { width: 1px; height: 16px; background: var(--jb-border); margin: 0 4px; }
+.toolbar .status { font-size: 11px; color: var(--jb-text-secondary); margin-left: auto; }
+
+/* Header bar */
+.header-bar {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background: var(--jb-surface-elevated);
+  border-bottom: 1px solid var(--jb-border);
+  gap: 4px;
+  min-height: 34px;
+}
+.header-bar .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--jb-green);
+}
+.header-bar .reponame {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--jb-text);
+}
+.header-bar .branch {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+  margin-left: auto;
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: var(--jb-surface-elevated);
+  border-bottom: 1px solid var(--jb-border-light);
+  gap: 6px;
+  min-height: 26px;
+}
+.filter-bar label {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+}
+.filter-bar select {
+  font-size: 11px;
+  background: var(--jb-input-bg);
+  color: var(--jb-text);
+  border: 1px solid var(--jb-input-border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  outline: none;
+}
+
+/* ── Tab bar ────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--jb-divider);
+  background: var(--jb-bg);
+}
+.tab {
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--jb-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .1s, border-color .1s;
+  user-select: none;
+}
+.tab:hover { color: var(--jb-text); }
+.tab.active {
+  color: var(--jb-text);
+  border-bottom-color: var(--jb-tab-active-border);
+}
+.tab .count {
+  color: var(--jb-text-secondary);
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+/* ── List items (card-style) ──────────────────────── */
+.list-container {
+  height: 380px;
+  overflow-y: auto;
+  background: var(--jb-surface);
+}
+.list-container::-webkit-scrollbar {
+  width: 6px;
+}
+.list-container::-webkit-scrollbar-thumb {
+  background: var(--jb-border);
+  border-radius: 3px;
+}
+.list-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--jb-border-light);
+  cursor: pointer;
+  transition: background .08s;
+  gap: 8px;
+}
+.list-item:hover { background: var(--jb-hover-bg); }
+.list-item.selected { background: var(--jb-selection-bg); }
+.list-item.selected .title { color: var(--jb-selection-fg); }
+.list-item.selected .meta { color: rgba(255,255,255,0.65); }
+
+.list-item .badge-col { flex-shrink: 0; padding-top: 1px; }
+.list-item .content-col { flex: 1; min-width: 0; }
+.list-item .title {
+  font-size: 12px;
+  color: var(--jb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.list-item .title .num {
+  color: var(--jb-link);
+  font-family: var(--font-code);
+  font-size: 11px;
+  margin-right: 3px;
+}
+.list-item.selected .title .num { color: var(--jb-selection-fg); }
+.list-item .meta {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+  margin-top: 1px;
+}
+.list-item .checkout-btn {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--jb-input-bg);
+  border: 1px solid var(--jb-input-border);
+  border-radius: 3px;
+  color: var(--jb-text-secondary);
+  cursor: pointer;
+  visibility: hidden;
+  margin-top: 3px;
+}
+.list-item:hover .checkout-btn { visibility: visible; }
+.list-item .checkout-btn:hover { background: var(--jb-hover-bg); color: var(--jb-text); }
+
+/* ── Branch items ──────────────────────────────────── */
+.branch-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--jb-border-light);
+  cursor: pointer;
+  transition: background .08s;
+  gap: 6px;
+}
+.branch-item:hover { background: var(--jb-hover-bg); }
+.branch-item .name {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--jb-text);
+  flex: 1;
+}
+.branch-item .sha {
+  font-family: var(--font-code);
+  font-size: 10px;
+  color: var(--jb-text-secondary);
+}
+.branch-item .icon {
+  font-size: 12px;
+  color: var(--jb-text-secondary);
+  width: 14px;
+  text-align: center;
+}
+
+/* ── Badge Component ───────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.badge.open { background: var(--jb-badge-open-bg); color: var(--jb-badge-open-fg); border-color: var(--jb-badge-open-border); }
+.badge.closed { background: var(--jb-badge-closed-bg); color: var(--jb-badge-closed-fg); border-color: var(--jb-badge-closed-border); }
+.badge.merged { background: var(--jb-badge-merged-bg); color: var(--jb-badge-merged-fg); border-color: var(--jb-badge-merged-border); }
+.badge.draft { background: var(--jb-badge-draft-bg); color: var(--jb-badge-draft-fg); border-color: var(--jb-badge-draft-border); }
+
+/* ── Detail view ────────────────────────────────────── */
+.detail-view {
+  height: 400px;
+  overflow-y: auto;
+  background: var(--jb-surface);
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--jb-border);
+  background: var(--jb-surface-elevated);
+}
+.detail-header .back-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--jb-text-secondary); font-size: 16px;
+  padding: 2px 6px; border-radius: 3px;
+}
+.detail-header .back-btn:hover { background: var(--jb-hover-bg); color: var(--jb-text); }
+.detail-body { padding: 12px 14px; }
+.detail-body h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 4px 0 6px;
+}
+.detail-body .meta-row {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+  margin-bottom: 12px;
+}
+.detail-body .desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--jb-text);
+  padding: 8px;
+  background: var(--jb-surface-elevated);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  word-wrap: break-word;
+  white-space: normal;
+}
+.detail-body .actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.detail-body .actions button {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: var(--jb-input-bg);
+  border: 1px solid var(--jb-input-border);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--jb-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.detail-body .actions button:hover { background: var(--jb-hover-bg); }
+.detail-body .actions button.primary {
+  background: var(--jb-accent);
+  color: #fff;
+  border-color: var(--jb-accent);
+}
+
+/* ── Comment component ──────────────────────────────── */
+.comment { margin: 6px 0; padding: 6px 0; border-bottom: 1px solid var(--jb-border-light); }
+.comment:last-child { border-bottom: none; }
+.comment .author { font-weight: 600; font-size: 11px; }
+.comment .time { font-size: 10px; color: var(--jb-text-secondary); margin-left: 6px; }
+.comment .body { font-size: 11px; margin-top: 3px; line-height: 1.5; }
+.comment-input {
+  margin-top: 10px;
+}
+.comment-input textarea {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 8px;
+  background: var(--jb-input-bg);
+  color: var(--jb-text);
+  border: 1px solid var(--jb-input-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 44px;
+  font-family: var(--font-ui);
+}
+.comment-input textarea:focus { outline: none; border-color: var(--jb-accent); }
+.comment-input .post-btn {
+  margin-top: 4px;
+  font-size: 11px;
+  padding: 2px 10px;
+  background: var(--jb-accent);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* ── Settings Panel ─────────────────────────────────── */
+.settings-shell {
+  width: 540px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--jb-bg);
+  border: 1px solid var(--jb-border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+.settings-shell .titlebar {
+  height: 28px;
+  background: var(--jb-surface);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--jb-border);
+  gap: 8px;
+}
+.settings-shell .titlebar .breadcrumb {
+  font-size: 11px;
+  color: var(--jb-text-secondary);
+}
+.settings-shell .titlebar .breadcrumb strong {
+  color: var(--jb-text);
+}
+.settings-content {
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.settings-section {
+  padding: 10px 14px 8px;
+}
+.settings-section + .settings-section {
+  border-top: 1px solid var(--jb-border-light);
+}
+.settings-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--jb-text);
+  margin-bottom: 6px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.settings-row .label {
+  color: var(--jb-text);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+.settings-row .value {
+  flex: 1;
+  color: var(--jb-text-secondary);
+  font-size: 11px;
+}
+.settings-row input[type="password"],
+.settings-row input[type="text"] {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 6px;
+  background: var(--jb-input-bg);
+  color: var(--jb-text);
+  border: 1px solid var(--jb-input-border);
+  border-radius: 3px;
+  outline: none;
+}
+.settings-row input:focus { border-color: var(--jb-accent); }
+.settings-row .status-ok { font-size: 11px; color: var(--jb-green); }
+.settings-row .status-err { font-size: 11px; color: var(--jb-error); }
+.settings-row .btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--jb-input-bg);
+  border: 1px solid var(--jb-input-border);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--jb-text);
+}
+.settings-row .btn:hover { background: var(--jb-hover-bg); }
+.settings-row .btn.primary { background: var(--jb-accent); color: #fff; border-color: var(--jb-accent); }
+.settings-row .btn.danger { color: var(--jb-error); }
+.settings-row a {
+  color: var(--jb-link);
+  text-decoration: none;
+  font-size: 11px;
+}
+.settings-row a:hover { text-decoration: underline; }
+
+/* ── Token spec block ───────────────────────────────── */
+.token-spec {
+  margin-top: 24px;
+  width: 100%;
+  max-width: 1120px;
+}
+.token-spec summary {
+  cursor: pointer;
+  padding: 6px 12px;
+  background: #1e1e22;
+  color: #aaa;
+  border-radius: 4px;
+  font-size: 12px;
+  user-select: none;
+}
+.token-spec summary:hover { background: #25252a; }
+.token-spec pre {
+  background: #16161a;
+  color: #c0c0c8;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-code);
+  overflow-x: auto;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+.token-spec .hl { color: #7ec8e3; }
+.token-spec .k { color: #c792ea; }
+.token-spec .s { color: #c3e88d; }
+.token-spec .c { color: #676e95; font-style: italic; }
+.token-spec .err { color: #f07178; }
+
+/* ── Labels ─────────────────────────────────────────── */
+.variant-label {
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Micro-interaction hints ────────────────────────── */
+.interaction-guide {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: #666;
+}
+.interaction-guide span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.interaction-guide kbd {
+  background: #333;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: var(--font-code);
+  font-size: 10px;
+  border: 1px solid #444;
+}
+
+/* ── Empty state ────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--jb-text-secondary);
+  gap: 4px;
+}
+.empty-state .icon { font-size: 28px; opacity: 0.5; }
+.empty-state .title { font-size: 12px; }
+.empty-state .sub { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <label>Theme:</label>
+  <button onclick="setTheme('light')" id="btn-light" class="active">IntelliJ Light</button>
+  <button onclick="setTheme('darcula')" id="btn-darcula">Darcula</button>
+  <button onclick="setTheme('high-contrast')" id="btn-hc">High Contrast</button>
+  <span style="flex:1"></span>
+  <label>View:</label>
+  <button onclick="showList()" id="btn-list" class="active">Issues List</button>
+  <button onclick="showDetail()" id="btn-detail">Detail View</button>
+  <button onclick="showSettings()" id="btn-settings">Settings</button>
+  <button onclick="showBranches()" id="btn-branches">Branches</button>
+</div>
+
+<div class="viewport" id="viewport">
+
+  <!-- ===== INTEGRATION: List View (Issues) ===== -->
+  <div class="ide-shell" id="shell-list">
+    <div class="variant-label">Tool Window · Issues List</div>
+    <div class="ide-titlebar">
+      <span class="dot" style="background:#ff5f56"></span>
+      <span class="dot" style="background:#ffbd2e"></span>
+      <span class="dot" style="background:#27c93f"></span>
+      <span class="label">Remote VCS Manager — finsible/android-client</span>
+    </div>
+
+    <div class="toolbar">
+      <button title="Refresh">↻</button>
+      <span class="sep"></span>
+      <button title="New Issue">+</button>
+      <span class="sep"></span>
+      <button title="Open on GitHub">↗</button>
+      <span class="sep"></span>
+      <button title="Settings">⚙</button>
+      <span class="status">12 open issues, 3 PRs, 47 branches</span>
+    </div>
+
+    <div class="header-bar">
+      <span class="dot"></span>
+      <span class="reponame">finsible/android-client</span>
+      <span class="branch">· main</span>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="if(!this.classList.contains('active')){document.querySelector('.tab.active').classList.remove('active');this.classList.add('active');showList()}">Issues <span class="count">(12)</span></div>
+      <div class="tab" onclick="if(!this.classList.contains('active')){document.querySelector('.tab.active').classList.remove('active');this.classList.add('active');showBranches()}">Pull Requests <span class="count">(3)</span></div>
+      <div class="tab" onclick="if(!this.classList.contains('active')){document.querySelector('.tab.active').classList.remove('active');this.classList.add('active');showBranches()}">Branches <span class="count">(47)</span></div>
+    </div>
+
+    <div class="filter-bar">
+      <label>State:</label>
+      <select><option>All</option><option>Open</option><option>Closed</option></select>
+    </div>
+
+    <div class="list-container">
+      <div class="list-item selected" onclick="makeSelected(this); showDetail(event)">
+        <div class="badge-col"><span class="badge open">● Open</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#99</span>Revamp New Transaction for faster UX</div>
+          <div class="meta">by alph-a07 · 2h ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge open">● Open</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#98</span>Add biometric auth support for withdrawal flow</div>
+          <div class="meta">by dev-priyansh · 1d ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge open">● Open</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#97</span>Fix race condition in transaction callback handler</div>
+          <div class="meta">by toxoid-engine · 2d ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge closed">● Closed</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#96</span>Update dependency: kotlin 2.2.0 → 2.3.1</div>
+          <div class="meta">by dependabot · 3d ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge open">● Open</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#95</span>Implement category budgeting with progressive rollover</div>
+          <div class="meta">by alph-a07 · 4d ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge open">● Open</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#94</span>Investigate memory leak in ObjectBox sync service</div>
+          <div class="meta">by toxoid-engine · 5d ago</div>
+        </div>
+      </div>
+      <div class="list-item" onclick="makeSelected(this)">
+        <div class="badge-col"><span class="badge closed">● Closed</span></div>
+        <div class="content-col">
+          <div class="title"><span class="num">#93</span>Onboarding: Add tutorial overlay for new accounts</div>
+          <div class="meta">by dev-priyansh · 6d ago</div>
+        </div>
+      </div>
+    </div>
+    <div class="interaction-guide">
+      <span>🖱 Click to open detail</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+      <span><kbd>N</kbd> New Issue</span>
+    </div>
+  </div>
+
+  <!-- ===== INTEGRATION: Detail View ===== -->
+  <div class="ide-shell" id="shell-detail" style="display:none">
+    <div class="variant-label">Tool Window · Detail View (full-screen)</div>
+    <div class="ide-titlebar">
+      <span class="dot" style="background:#ff5f56"></span>
+      <span class="dot" style="background:#ffbd2e"></span>
+      <span class="dot" style="background:#27c93f"></span>
+      <span class="label">Remote VCS Manager — Issue #99</span>
+    </div>
+
+    <div class="toolbar">
+      <button title="Refresh">↻</button>
+      <span class="sep"></span>
+      <button title="New Issue">+</button>
+      <span class="sep"></span>
+      <button title="Open on GitHub">↗</button>
+      <span style="flex:1"></span>
+      <span class="status">12 open issues, 3 PRs, 47 branches</span>
+    </div>
+
+    <div class="detail-view">
+      <div class="detail-header">
+        <button class="back-btn" onclick="showList()">←</button>
+        <span style="margin-left:6px;font-size:11px;color:var(--jb-text-secondary)">Back to all issues</span>
+      </div>
+      <div class="detail-body">
+        <span class="badge open">● Open</span>
+        <span style="font-family:var(--font-code);font-size:11px;color:var(--jb-link);margin-left:6px">#99</span>
+        <h2>Revamp New Transaction for faster UX</h2>
+        <div class="meta-row">
+          <span>by <strong>alph-a07</strong></span>
+          <span> · opened 2 hours ago</span>
+          <span> · 4 comments</span>
+        </div>
+
+        <div class="desc">
+          The new transaction sheet currently takes ~1.2s to become interactive on mid-range devices.<br><br>
+          This PR reduces it to ~300ms by:<br>
+          • Pre-fetching account list at app launch<br>
+          • Using lazy composables for category picker<br>
+          • Caching recent payee suggestions locally<br><br>
+          Closes #99
+        </div>
+
+        <div class="actions">
+          <button class="primary">Close Issue</button>
+          <button>↗ Open in Browser</button>
+          <button>⎘ Copy Link</button>
+        </div>
+
+        <h3 style="font-size:11px;font-weight:600;margin:16px 0 6px;color:var(--jb-text)">Comments (4)</h3>
+
+        <div class="comment">
+          <span class="author">toxoid-engine</span><span class="time">· 1h ago</span>
+          <div class="body">Nice work on the lazy composables. Have you benchmarked the memory impact?</div>
+        </div>
+        <div class="comment">
+          <span class="author">alph-a07</span><span class="time">· 45min ago</span>
+          <div class="body">Yes — peak memory actually dropped 8% because we're not holding all categories in memory at once.</div>
+        </div>
+        <div class="comment">
+          <span class="author">dev-priyansh</span><span class="time">· 30min ago</span>
+          <div class="body">The payee suggestion caching is smart. Let's make sure we invalidate the cache on a new transaction being posted. ✅</div>
+        </div>
+        <div class="comment">
+          <span class="author">toxoid-engine</span><span class="time">· 12min ago</span>
+          <div class="body">Approved. Let's ship this in the next release. 🚀</div>
+        </div>
+
+        <div class="comment-input">
+          <textarea placeholder="Leave a comment..."></textarea>
+          <button class="post-btn">Post Comment</button>
+        </div>
+      </div>
+    </div>
+    <div class="interaction-guide">
+      <span>← Back returns to list</span>
+      <span><kbd>Esc</kbd> Close detail</span>
+      <span><kbd>⌘Enter</kbd> Post comment</span>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS PANEL ===== -->
+  <div class="settings-shell" id="shell-settings" style="display:none">
+    <div class="variant-label">Settings · Tools > Remote VCS Manager</div>
+    <div class="titlebar">
+      <span class="breadcrumb">Settings</span>
+      <span style="color:var(--jb-text-secondary);font-size:11px">/</span>
+      <span class="breadcrumb">Tools</span>
+      <span style="color:var(--jb-text-secondary);font-size:11px">/</span>
+      <span class="breadcrumb"><strong>Remote VCS Manager</strong></span>
+    </div>
+
+    <div class="settings-content">
+      <div class="settings-section">
+        <h3>Current Repository</h3>
+        <div class="settings-row">
+          <span class="label">Repository:</span>
+          <span class="value"><strong>finsible/android-client</strong></span>
+        </div>
+        <div class="settings-row">
+          <span class="label">Remote:</span>
+          <span class="value">origin · <span style="color:var(--jb-text-secondary)">https://github.com/finsible/android-client.git</span></span>
+        </div>
+        <div class="settings-row">
+          <span class="label">Branch:</span>
+          <span class="value">main</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Authentication</h3>
+        <div class="settings-row">
+          <span class="label">Token:</span>
+          <input type="password" value="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="flex:1">
+          <button class="btn primary">Validate</button>
+          <button class="btn danger">Clear Token</button>
+        </div>
+        <div class="settings-row">
+          <span></span>
+          <span class="status-ok">✓ Authenticated as alph-a07</span>
+        </div>
+        <div class="settings-row">
+          <span></span>
+          <a href="#">Generate a token scoped to finsible/android-client →</a>
+        </div>
+        <div class="settings-row">
+          <span></span>
+          <a href="#">Generate a GitHub token →</a>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Preferences</h3>
+        <div class="settings-row">
+          <input type="checkbox" checked id="auto-refresh">
+          <label for="auto-refresh">Auto-refresh on project open</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BRANCHES TAB ===== -->
+  <div class="ide-shell" id="shell-branches" style="display:none">
+    <div class="variant-label">Tool Window · Branches Tab</div>
+    <div class="ide-titlebar">
+      <span class="dot" style="background:#ff5f56"></span>
+      <span class="dot" style="background:#ffbd2e"></span>
+      <span class="dot" style="background:#27c93f"></span>
+      <span class="label">Remote VCS Manager — finsible/android-client</span>
+    </div>
+
+    <div class="toolbar">
+      <button title="Refresh">↻</button>
+      <span class="sep"></span>
+      <button title="New Issue">+</button>
+      <span class="sep"></span>
+      <button title="Open on GitHub">↗</button>
+      <span class="sep"></span>
+      <button title="Settings">⚙</button>
+      <span class="status">47 branches</span>
+    </div>
+
+    <div class="header-bar">
+      <span class="dot"></span>
+      <span class="reponame">finsible/android-client</span>
+      <span class="branch">· main</span>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab" onclick="if(!this.classList.contains('active')){document.querySelector('.tab.active').classList.remove('active');this.classList.add('active');showList()}">Issues <span class="count">(12)</span></div>
+      <div class="tab" onclick="if(!this.classList.contains('active')){document.querySelector('.tab.active').classList.remove('active');this.classList.add('active');showBranches()}">Pull Requests <span class="count">(3)</span></div>
+      <div class="tab active">Branches <span class="count">(47)</span></div>
+    </div>
+
+    <div class="list-container" style="height:350px">
+      <div class="branch-item" style="background:var(--jb-surface-elevated);font-size:10px;color:var(--jb-text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;cursor:default">
+        <span class="icon"></span>
+        <span class="name">Default</span>
+        <span class="sha"></span>
+      </div>
+      <div class="branch-item selected" onclick="makeSelected(this)">
+        <span class="icon">★</span>
+        <span class="name">main</span>
+        <span class="sha">8f3a1b2c</span>
+      </div>
+
+      <div class="branch-item" style="background:var(--jb-surface-elevated);font-size:10px;color:var(--jb-text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;cursor:default;margin-top:4px">
+        <span class="icon"></span>
+        <span class="name">With Open PRs</span>
+        <span class="sha"></span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">enhancement/new-transaction-ux</span>
+        <span class="sha">7a852f66</span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">epic/may-2026-overhaul-01</span>
+        <span class="sha">0de80248</span>
+      </div>
+
+      <div class="branch-item" style="background:var(--jb-surface-elevated);font-size:10px;color:var(--jb-text-secondary);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;cursor:default;margin-top:4px">
+        <span class="icon"></span>
+        <span class="name">All Branches</span>
+        <span class="sha"></span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">bugfix/fetch-txns-post-auth</span>
+        <span class="sha">178ea360</span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">bugfix/objectbox-crashes</span>
+        <span class="sha">9553806a</span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">feature/biometric-auth</span>
+        <span class="sha">a4b77c1d</span>
+      </div>
+      <div class="branch-item" onclick="makeSelected(this)">
+        <span class="icon"></span>
+        <span class="name">feature/category-budget-rollover</span>
+        <span class="sha">bc9a12ef</span>
+      </div>
+    </div>
+    <div class="interaction-guide">
+      <span>🖱 Click a branch for detail + checkout</span>
+      <span>★ Default branch only</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOKEN SPEC ===== -->
+<div class="token-spec">
+<details open>
+<summary>📐 Token / API Spec — JetBrains UI DSL (Level C · Constrained)</summary>
+<pre><span class="c">// Remote VCS Manager — Tool Window Panel</span>
+<span class="c">// Surface: JetBrains Plugin (Level C — constrained)</span>
+<span class="c">// Theme: IntelliJ Light / Darcula (note: tokens swap automatically)</span>
+
+<span class="c">// ── List Card (JBList + custom ListCellRenderer) ──</span>
+<span class="hl">background</span>          → <span class="s">UIUtil.getTableBackground()</span>
+<span class="hl">selected.bg</span>        → <span class="s">UIUtil.getTableSelectionBackground(true)</span>
+<span class="hl">hover.bg</span>           → <span class="s">UIUtil.getTableSelectionBackground(false)</span>
+<span class="hl">title.fg</span>           → <span class="s">UIUtil.getLabelForeground()</span>
+<span class="hl">title.selected.fg</span>  → <span class="s">UIUtil.getTableSelectionForeground(true)</span>
+<span class="hl">meta.fg</span>            → <span class="s">UIUtil.getContextHelpForeground()</span>
+<span class="hl">link.color</span>         → <span class="s">JBUI.CurrentTheme.Link.linkColor()</span>
+<span class="hl">cell.padding</span>       → <span class="s">JBUI.Borders.empty(6, 8, 6, 8)</span>
+<span class="hl">font</span>               → <span class="s">JBUI.Fonts.label()</span>
+<span class="hl">font.small</span>         → <span class="s">JBUI.Fonts.smallFont()</span>
+<span class="hl">font.mono</span>          → <span class="s">new Font(Font.MONOSPACED, Font.PLAIN, 11)</span>
+
+<span class="c">// ── StateBadge (custom pill component) ──</span>
+<span class="hl">open.bg</span>            → <span class="s">Color(0x2DA44E, 25)</span>  <span class="c">// 10% alpha green</span>
+<span class="hl">open.fg</span>            → <span class="s">JBColor(0x1A7F37, 0x3FB950)</span>
+<span class="hl">open.border</span>        → <span class="s">Color(0x2DA44E, 60)</span>  <span class="c">// 24% alpha</span>
+<span class="hl">closed.bg</span>          → <span class="s">Color(0x8957E5, 25)</span>
+<span class="hl">closed.fg</span>          → <span class="s">JBColor(0x8250DF, 0xBC8CFF)</span>
+<span class="hl">merged.bg</span>          → <span class="s">Color(0x8957E5, 25)</span>
+<span class="hl">merged.fg</span>          → <span class="s">JBColor(0x8250DF, 0xBC8CFF)</span>
+
+<span class="c">// ── Detail Panel (full-screen with back) ──</span>
+<span class="hl">back.button</span>         → <span class="s">AllIcons.Actions.Back</span>
+<span class="hl">close.button</span>       → <span class="s">JButton("Close Issue", AllIcons.Actions.Cancel)</span>
+<span class="hl">external.link</span>      → <span class="s">AllIcons.Ide.External_link_arrow</span>
+<span class="hl">comment.post</span>       → <span class="s">ProgressManager + runBlocking { provider.addIssueComment() }</span>
+
+<span class="c">// ── ⚠️ Constraints (do NOT violate) ──</span>
+<span class="err">⚠️  No hardcoded hex colors — always use JBColor / JBUI.CurrentTheme</span>
+<span class="err">⚠️  All spacing must use JBUI.scale() / JBUI.insets() for HiDPI</span>
+<span class="err">⚠️  No CSS — Swing-based rendering; use JPanel/BorderLayout</span>
+<span class="err">⚠️  JBList cell renderers must be stateless stamps (rubber-stamp pattern)</span>
+</pre>
+</details>
+
+<details>
+<summary>📐 Token / API Spec — Settings Panel</summary>
+<pre><span class="c">// Remote VCS Manager — Settings Configurable</span>
+<span class="hl">registration</span>        → <span class="s">&lt;applicationConfigurable parentId="tools"/&gt;</span>
+<span class="hl">panel.background</span>   → <span class="s">JBUI.CurrentTheme.Panel.background()</span>
+<span class="hl">input.background</span>   → <span class="s">UIUtil.getTextFieldBackground()</span>
+<span class="hl">input.border</span>       → <span class="s">JBUI.Borders.empty() + on-focus: JBUI.CurrentTheme.Focus.focusBorderColor()</span>
+<span class="hl">section.header</span>     → <span class="s">JLabel("&lt;html&gt;&lt;b&gt;Section Title&lt;/b&gt;&lt;/html&gt;") with JSeparator</span>
+<span class="hl">token.link</span>         → <span class="s">HyperlinkLabel with BrowserUtil.browse()</span>
+<span class="hl">dynamic.url</span>        → <span class="s">GitRemoteDetector.detect() → repo-scoped token URL</span>
+</pre>
+</details>
+</div>
+
+<script>
+function setTheme(theme) {
+  document.querySelectorAll('.btn-light, .btn-darcula, .btn-hc')
+  document.getElementById('btn-light').classList.toggle('active', theme === 'light');
+  document.getElementById('btn-darcula').classList.toggle('active', theme === 'darcula');
+  document.getElementById('btn-hc').classList.toggle('active', theme === 'high-contrast');
+  document.querySelectorAll('.ide-shell, .settings-shell').forEach(el => {
+    el.classList.toggle('darcula', theme === 'darcula');
+    el.classList.toggle('high-contrast', theme === 'high-contrast');
+  });
+}
+
+function showList() {
+  document.getElementById('shell-list').style.display = '';
+  document.getElementById('shell-detail').style.display = 'none';
+  document.getElementById('shell-settings').style.display = 'none';
+  document.getElementById('shell-branches').style.display = 'none';
+  document.getElementById('btn-list').classList.add('active');
+  document.getElementById('btn-detail').classList.remove('active');
+  document.getElementById('btn-settings').classList.remove('active');
+  document.getElementById('btn-branches').classList.remove('active');
+}
+
+function showDetail(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('shell-list').style.display = 'none';
+  document.getElementById('shell-detail').style.display = '';
+  document.getElementById('shell-settings').style.display = 'none';
+  document.getElementById('shell-branches').style.display = 'none';
+  document.getElementById('btn-list').classList.remove('active');
+  document.getElementById('btn-detail').classList.add('active');
+  document.getElementById('btn-settings').classList.remove('active');
+  document.getElementById('btn-branches').classList.remove('active');
+}
+
+function showSettings() {
+  document.getElementById('shell-list').style.display = 'none';
+  document.getElementById('shell-detail').style.display = 'none';
+  document.getElementById('shell-settings').style.display = '';
+  document.getElementById('shell-branches').style.display = 'none';
+  document.getElementById('btn-list').classList.remove('active');
+  document.getElementById('btn-detail').classList.remove('active');
+  document.getElementById('btn-settings').classList.add('active');
+  document.getElementById('btn-branches').classList.remove('active');
+}
+
+function showBranches() {
+  document.getElementById('shell-list').style.display = 'none';
+  document.getElementById('shell-detail').style.display = 'none';
+  document.getElementById('shell-settings').style.display = 'none';
+  document.getElementById('shell-branches').style.display = '';
+  document.getElementById('btn-list').classList.remove('active');
+  document.getElementById('btn-detail').classList.remove('active');
+  document.getElementById('btn-settings').classList.remove('active');
+  document.getElementById('btn-branches').classList.add('active');
+}
+
+function makeSelected(el) {
+  el.closest('.list-container, .ide-shell')?.querySelectorAll('.selected').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

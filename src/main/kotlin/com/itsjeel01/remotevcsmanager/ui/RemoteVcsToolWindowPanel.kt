@@ -124,6 +124,7 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
         // Issue tab
         issueFilter.addActionListener { filterIssues() }
         issueList.model = issueModel; issueList.addListSelectionListener { if (!it.valueIsAdjusting) openDetail() }
+        issueList.emptyText.text = "No issues \u2014 press N to create one"
         tabPane.addTab("Issues", AllIcons.General.TodoDefault, JPanel(BorderLayout()).apply {
             add(JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { isOpaque = false; add(JBLabel("State:").apply { font = SF }); add(issueFilter) }, BorderLayout.NORTH)
             add(JBScrollPane(issueList).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
