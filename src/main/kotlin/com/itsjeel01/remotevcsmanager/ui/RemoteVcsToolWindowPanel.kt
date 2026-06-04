@@ -10,9 +10,7 @@ import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
-import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
@@ -21,14 +19,14 @@ import com.intellij.util.ui.UIUtil
 import com.itsjeel01.remotevcsmanager.GitRemoteDetector
 import com.itsjeel01.remotevcsmanager.models.*
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
-import com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState
 import com.itsjeel01.remotevcsmanager.settings.SettingsChangeNotifier
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadge
 import com.itsjeel01.remotevcsmanager.ui.detail.IssueDetailPanel
 import kotlinx.coroutines.runBlocking
 import java.awt.*
 import java.awt.datatransfer.StringSelection
-import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.swing.*
@@ -40,62 +38,59 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
     private val provider = GitHubProvider()
     private val myProject = project
 
-    private var remoteOwner: String? = null; private var remoteRepo: String? = null; private var remoteDetected = false
+    private var remoteOwner: String? = null
+    private var remoteRepo: String? = null
+    private var remoteDetected = false
 
-    // Header — modern, clean
-    private val statusDot = JLabel().apply { foreground = JBColor(0x2DA44E, 0x3FB950); font = font.deriveFont(16f) }
-    private val repoLabel = JBLabel("No remote").apply { font = JBUI.Fonts.label(12f).asBold() }
+    // Header
+    private val repoLabel = JBLabel("No remote").apply { font = JBUI.Fonts.label(13f).asBold() }
     private val branchLabel = JBLabel().apply { font = JBUI.Fonts.smallFont(); foreground = UIUtil.getContextHelpForeground() }
     private val statusLabel = JBLabel("Ready").apply { font = JBUI.Fonts.smallFont(); foreground = UIUtil.getContextHelpForeground() }
 
-    // Card layout
+    // Navigation state
     private val cardPanel = JPanel(CardLayout())
     private val listPanel = JPanel(BorderLayout())
     private val detailContainer = JPanel(BorderLayout())
-    private val emptyDetail = JBLabel("Select an item", SwingConstants.CENTER).apply { foreground = UIUtil.getContextHelpForeground() }
     private val cards: CardLayout get() = cardPanel.layout as CardLayout
 
     // Filters
     private val issueFilter = JComboBox(arrayOf("All", "Open", "Closed"))
     private val prFilter = JComboBox(arrayOf("Open", "Merged", "Closed", "All"))
 
-    // Tabs + lists
+    // Tabs
     private val tabPane = JTabbedPane().apply { font = JBUI.Fonts.label() }
-    private val issueModel = DefaultListModel<Issue?>()
-    private val prModel = DefaultListModel<PullRequest?>()
-    private val branchModel = DefaultListModel<GitBranch?>()
-    private val issueList = JBList<Issue?>().apply { cellRenderer = IssueCardRenderer(); selectionMode = ListSelectionModel.SINGLE_SELECTION }
-    private val prList = JBList<PullRequest?>().apply { cellRenderer = PRCardRenderer(); selectionMode = ListSelectionModel.SINGLE_SELECTION }
-    private val branchList = JBList<GitBranch?>().apply { cellRenderer = BranchCardRenderer(); selectionMode = ListSelectionModel.SINGLE_SELECTION }
 
-    // Data
-    private var issueData: List<Issue> = emptyList(); private var prData: List<PullRequest> = emptyList()
+    // Physical Panel Lists (Replaces JBList to fix hover/click bugs)
+    private val issueListPanel = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val prListPanel = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val branchListPanel = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+
+    // Data Caches
+    private var issueData: List<Issue> = emptyList()
+    private var prData: List<PullRequest> = emptyList()
+    private var branchData: List<GitBranch> = emptyList()
 
     init {
-        buildUI(); regKeys(); reloadConfig()
-        // React to token changes without restart
+        buildUI()
+        regKeys()
+        reloadConfig()
+
         val connection = ApplicationManager.getApplication().messageBus.connect()
         connection.subscribe(SettingsChangeNotifier.SETTINGS_CHANGED,
             SettingsChangeNotifier.SettingsChangeListener { reloadConfig() })
     }
 
     companion object {
-        const val LIST = "list"; const val DETAIL = "detail"
+        const val LIST = "list"
+        const val DETAIL = "detail"
+        val SF = JBUI.Fonts.smallFont()
+
         fun fmt(iso: String): String = try {
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
             val d = sdf.parse(iso.take(19)) ?: return iso
             val diff = Date().time - d.time; val m = diff / 60000; val h = m / 60; val dd = h / 24; val w = dd / 7
             when { m < 1 -> "now"; m < 60 -> "${m}m"; h < 24 -> "${h}h"; dd < 7 -> "${dd}d"; w < 5 -> "${w}w"; else -> SimpleDateFormat("MMM d", Locale.US).format(d) }
         } catch (_: Exception) { iso }
-        val SF = JBUI.Fonts.smallFont(); val CP = BorderFactory.createEmptyBorder(5, 8, 5, 8)
-    }
-
-    private fun regKeys() {
-        registerKeyboardAction({ refresh() }, KeyStroke.getKeyStroke("R"), WHEN_IN_FOCUSED_WINDOW)
-        registerKeyboardAction({ createIssue() }, KeyStroke.getKeyStroke("N"), WHEN_IN_FOCUSED_WINDOW)
-        registerKeyboardAction({ openDetail() }, KeyStroke.getKeyStroke("ENTER"), WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-        registerKeyboardAction({ if (detailContainer.isVisible) cards.show(cardPanel, LIST) }, KeyStroke.getKeyStroke("ESCAPE"), WHEN_IN_FOCUSED_WINDOW)
-        registerKeyboardAction({ if (tabPane.selectedIndex == 0) issueFilter.requestFocusInWindow() else prFilter.requestFocusInWindow() }, KeyStroke.getKeyStroke("/"), WHEN_IN_FOCUSED_WINDOW)
     }
 
     private fun buildUI() {
@@ -103,7 +98,8 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
         val tg = DefaultActionGroup().apply {
             add(object : AnAction("Refresh (R)", "Reload", AllIcons.Actions.Refresh) { override fun actionPerformed(e: AnActionEvent) = refresh(); override fun update(e: AnActionEvent) { e.presentation.isEnabled = true } })
             addSeparator()
-            add(object : AnAction("New Issue (N)", "Create", AllIcons.General.Add) { override fun actionPerformed(e: AnActionEvent) = createIssue(); override fun update(e: AnActionEvent) { e.presentation.isEnabled = remoteDetected && provider.isConfigured() } })
+            add(object : AnAction("New Issue", "Create Issue", AllIcons.General.Add) { override fun actionPerformed(e: AnActionEvent) = createIssue(); override fun update(e: AnActionEvent) { e.presentation.isEnabled = remoteDetected && provider.isConfigured() } })
+            add(object : AnAction("New PR", "Create Pull Request", AllIcons.Vcs.Merge) { override fun actionPerformed(e: AnActionEvent) = createPR(); override fun update(e: AnActionEvent) { e.presentation.isEnabled = remoteDetected && provider.isConfigured() } })
             addSeparator()
             add(object : AnAction("Open Repo", "", AllIcons.Ide.External_link_arrow) { override fun actionPerformed(e: AnActionEvent) { val o = remoteOwner ?: return; val r = remoteRepo ?: return; BrowserUtil.browse("https://github.com/$o/$r") }; override fun update(e: AnActionEvent) { e.presentation.isEnabled = remoteDetected } })
             addSeparator()
@@ -112,65 +108,183 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
         val tb = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, tg, true); tb.targetComponent = this
         add(JPanel(BorderLayout()).apply { add(tb.component, BorderLayout.WEST); add(statusLabel, BorderLayout.CENTER); border = JBUI.Borders.empty(1, 4) }, BorderLayout.NORTH)
 
-        // Header — moderna
+        // Header (Aligned to HTML mockup)
         add(JPanel(BorderLayout()).apply {
-            background = UIUtil.getTableBackground(); border = JBUI.Borders.empty(4, 8)
-            add(JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply { isOpaque = false
-                add(JLabel(AllIcons.Vcs.Branch).apply { border = JBUI.Borders.emptyRight(4) })
-                add(repoLabel); add(branchLabel)
+            background = UIUtil.getTableBackground()
+            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLineBottom(UIUtil.getBoundsColor()), JBUI.Borders.empty(10, 12))
+            add(JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply { isOpaque = false
+                add(JLabel(AllIcons.Vcs.Branch).apply {
+                    isOpaque = true; background = Color(107, 138, 253, 30); border = JBUI.Borders.empty(4)
+                })
+                add(repoLabel)
+                add(branchLabel)
             }, BorderLayout.WEST)
         }, BorderLayout.BEFORE_FIRST_LINE)
 
-        // Issue tab
-        issueFilter.addActionListener { filterIssues() }
-        issueList.model = issueModel; issueList.addListSelectionListener { if (!it.valueIsAdjusting) openDetail() }
-        issueList.emptyText.text = "No issues \u2014 press N to create one"
+        // Issue Tab
+        issueFilter.addActionListener { renderIssues() }
+        val issueScroll = JBScrollPane(issueListPanel).apply { border = JBUI.Borders.empty(); verticalScrollBar.unitIncrement = 16 }
         tabPane.addTab("Issues", AllIcons.General.TodoDefault, JPanel(BorderLayout()).apply {
-            add(JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { isOpaque = false; add(JBLabel("State:").apply { font = SF }); add(issueFilter) }, BorderLayout.NORTH)
-            add(JBScrollPane(issueList).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
+            add(JPanel(FlowLayout(FlowLayout.LEFT, 4, 6)).apply { isOpaque = false; add(JBLabel("State:").apply { font = SF }); add(issueFilter) }, BorderLayout.NORTH)
+            add(issueScroll, BorderLayout.CENTER)
         })
 
-        // PR tab
-        prFilter.addActionListener { filterPRs() }
-        prList.model = prModel; prList.addListSelectionListener { if (!it.valueIsAdjusting) openDetail() }
+        // PR Tab
+        prFilter.addActionListener { renderPRs() }
+        val prScroll = JBScrollPane(prListPanel).apply { border = JBUI.Borders.empty(); verticalScrollBar.unitIncrement = 16 }
         tabPane.addTab("PRs", AllIcons.Vcs.Merge, JPanel(BorderLayout()).apply {
-            add(JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { isOpaque = false; add(JBLabel("State:").apply { font = SF }); add(prFilter) }, BorderLayout.NORTH)
-            add(JBScrollPane(prList).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
+            add(JPanel(FlowLayout(FlowLayout.LEFT, 4, 6)).apply { isOpaque = false; add(JBLabel("State:").apply { font = SF }); add(prFilter) }, BorderLayout.NORTH)
+            add(prScroll, BorderLayout.CENTER)
         })
 
-        // Branch tab
-        branchList.model = branchModel; branchList.addListSelectionListener { if (!it.valueIsAdjusting) openDetail() }
-        tabPane.addTab("Branches", AllIcons.Vcs.Branch, JBScrollPane(branchList).apply { border = JBUI.Borders.empty() })
+        // Branch Tab
+        val branchScroll = JBScrollPane(branchListPanel).apply { border = JBUI.Borders.empty(); verticalScrollBar.unitIncrement = 16 }
+        tabPane.addTab("Branches", AllIcons.Vcs.Branch, branchScroll)
 
-        // Card layout
-        listPanel.add(tabPane, BorderLayout.CENTER); detailContainer.add(emptyDetail, BorderLayout.CENTER)
-        cardPanel.add(listPanel, LIST); cardPanel.add(detailContainer, DETAIL)
-        cards.show(cardPanel, LIST); add(cardPanel, BorderLayout.CENTER)
+        // Setup CardLayout
+        listPanel.add(tabPane, BorderLayout.CENTER)
+        cardPanel.add(listPanel, LIST)
+        cardPanel.add(detailContainer, DETAIL)
+        cards.show(cardPanel, LIST)
+        add(cardPanel, BorderLayout.CENTER)
     }
 
-    // ── Navigation ──────────────────────────────────────────────
-    private fun openDetail() {
-        when (tabPane.selectedIndex) {
-            0 -> issueList.selectedValue?.let { showDetail(buildIssueDetail(it)) }
-            1 -> prList.selectedValue?.let { showDetail(buildPRDetail(it)) }
-            2 -> branchList.selectedValue?.let { showDetail(buildBranchDetail(it)) }
+    private fun regKeys() {
+        registerKeyboardAction({ refresh() }, KeyStroke.getKeyStroke("R"), WHEN_IN_FOCUSED_WINDOW)
+        registerKeyboardAction({ if (detailContainer.isVisible) cards.show(cardPanel, LIST) }, KeyStroke.getKeyStroke("ESCAPE"), WHEN_IN_FOCUSED_WINDOW)
+    }
+
+    // ── Physical Rendering (Replaces ListCellRenderer) ───────────────────
+
+    private fun renderIssues() {
+        issueListPanel.removeAll()
+        val f = issueFilter.selectedItem as? String ?: "All"
+        val filtered = issueData.filter { when (f) { "Open" -> it.state == IssueState.OPEN; "Closed" -> it.state == IssueState.CLOSED; else -> true } }
+
+        if (filtered.isEmpty()) {
+            issueListPanel.add(JBLabel("No issues found", SwingConstants.CENTER).apply { border = JBUI.Borders.empty(20); foreground = UIUtil.getContextHelpForeground() })
+        } else {
+            filtered.forEach { issue -> issueListPanel.add(createIssueRow(issue)) }
         }
+        issueListPanel.revalidate(); issueListPanel.repaint()
     }
+
+    private fun createIssueRow(issue: Issue): JPanel {
+        val row = JPanel(GridBagLayout()).apply {
+            background = UIUtil.getTableBackground()
+            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLineBottom(UIUtil.getBoundsColor()), JBUI.Borders.empty(8, 12))
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        }
+
+        val badge = StateBadge().apply { setIssueState(issue.state) }
+        val title = JBLabel("#${issue.number} ${issue.title}").apply { font = JBUI.Fonts.label() }
+        val meta = JBLabel("by ${issue.author} · ${fmt(issue.updatedAt)}").apply { font = SF; foreground = UIUtil.getContextHelpForeground() }
+
+        // Hover Actions
+        val actionsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply { isOpaque = false; isVisible = false }
+        val openBtn = flatIconBtn(AllIcons.Ide.External_link_arrow, "Open in browser") { issue.url?.let { BrowserUtil.browse(it) } }
+        val copyBtn = flatIconBtn(AllIcons.Actions.Copy, "Copy link") { issue.url?.let { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(it), null) } }
+        actionsPanel.add(copyBtn); actionsPanel.add(openBtn)
+
+        row.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) {
+                row.background = UIUtil.getTableSelectionBackground(false)
+                actionsPanel.isVisible = true
+            }
+            override fun mouseExited(e: MouseEvent) {
+                row.background = UIUtil.getTableBackground()
+                actionsPanel.isVisible = false
+            }
+            override fun mouseClicked(e: MouseEvent) { showDetail(buildIssueDetail(issue)) }
+        })
+
+        val c = GridBagConstraints()
+        c.anchor = GridBagConstraints.WEST; c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(8); row.add(badge, c)
+        c.gridx = 1; c.weightx = 1.0; c.insets = JBUI.insets(0); row.add(title, c)
+        c.gridx = 2; c.weightx = 0.0; c.insets = JBUI.insets(0); row.add(actionsPanel, c)
+        c.gridx = 0; c.gridy = 1; c.gridwidth = 3; c.weightx = 0.0; c.insets = JBUI.insetsTop(4); row.add(meta, c)
+
+        return row
+    }
+
+    private fun renderPRs() {
+        prListPanel.removeAll()
+        val f = prFilter.selectedItem as? String ?: "Open"
+        val filtered = prData.filter { when (f) { "Open" -> it.state == PRState.OPEN; "Merged" -> it.state == PRState.MERGED; "Closed" -> it.state == PRState.CLOSED; else -> true } }
+
+        filtered.forEach { pr -> prListPanel.add(createPRRow(pr)) }
+        prListPanel.revalidate(); prListPanel.repaint()
+    }
+
+    private fun createPRRow(pr: PullRequest): JPanel {
+        val row = JPanel(GridBagLayout()).apply {
+            background = UIUtil.getTableBackground()
+            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLineBottom(UIUtil.getBoundsColor()), JBUI.Borders.empty(8, 12))
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        }
+        val badge = StateBadge().apply { setPRState(pr.state) }
+        val title = JBLabel("#${pr.id} ${pr.title}").apply { font = JBUI.Fonts.label() }
+        val meta = JBLabel("${pr.sourceBranch} → ${pr.targetBranch} · ${fmt(pr.updatedAt)}").apply { font = SF; foreground = UIUtil.getContextHelpForeground() }
+
+        row.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) { row.background = UIUtil.getTableSelectionBackground(false) }
+            override fun mouseExited(e: MouseEvent) { row.background = UIUtil.getTableBackground() }
+            override fun mouseClicked(e: MouseEvent) { showDetail(buildPRDetail(pr)) }
+        })
+
+        val c = GridBagConstraints()
+        c.anchor = GridBagConstraints.WEST; c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(8); row.add(badge, c)
+        c.gridx = 1; c.weightx = 1.0; c.insets = JBUI.insets(0); row.add(title, c)
+        c.gridx = 0; c.gridy = 1; c.gridwidth = 2; c.weightx = 0.0; c.insets = JBUI.insetsTop(4); row.add(meta, c)
+        return row
+    }
+
+    private fun renderBranches() {
+        branchListPanel.removeAll()
+        branchData.forEach { branch -> branchListPanel.add(createBranchRow(branch)) }
+        branchListPanel.revalidate(); branchListPanel.repaint()
+    }
+
+    private fun createBranchRow(branch: GitBranch): JPanel {
+        val row = JPanel(GridBagLayout()).apply {
+            background = UIUtil.getTableBackground()
+            border = BorderFactory.createCompoundBorder(JBUI.Borders.customLineBottom(UIUtil.getBoundsColor()), JBUI.Borders.empty(6, 12))
+        }
+        val name = JBLabel(branch.name).apply { font = Font(Font.MONOSPACED, Font.PLAIN, 12) }
+        val sha = JBLabel(branch.sha.take(7)).apply { font = Font(Font.MONOSPACED, Font.PLAIN, 10); foreground = UIUtil.getContextHelpForeground() }
+
+        val actionsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0)).apply { isOpaque = false; isVisible = false }
+        actionsPanel.add(flatIconBtn(AllIcons.Vcs.Branch, "Checkout") { checkout(branch.name) })
+
+        row.addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) { row.background = UIUtil.getTableSelectionBackground(false); actionsPanel.isVisible = true }
+            override fun mouseExited(e: MouseEvent) { row.background = UIUtil.getTableBackground(); actionsPanel.isVisible = false }
+            override fun mouseClicked(e: MouseEvent) { showDetail(buildBranchDetail(branch)) }
+        })
+
+        val c = GridBagConstraints()
+        if (branch.isDefault) { c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(6); c.anchor = GridBagConstraints.WEST; row.add(JLabel(AllIcons.Vcs.Branch), c) }
+        c.gridx = if (branch.isDefault) 1 else 0; c.weightx = 1.0; c.anchor = GridBagConstraints.WEST; row.add(name, c)
+        c.gridx = 2; c.weightx = 0.0; c.anchor = GridBagConstraints.EAST; row.add(actionsPanel, c)
+        c.gridx = 3; c.weightx = 0.0; c.anchor = GridBagConstraints.EAST; c.insets = JBUI.insetsLeft(8); row.add(sha, c)
+        return row
+    }
+
+    // ── Navigation & Actions ──────────────────────────────────────────────
 
     private fun showDetail(c: JComponent) {
         detailContainer.removeAll()
-        // Minimal back link (not a button)
         val back = JBLabel("  \u2190  Back").apply {
-            font = SF; foreground = JBUI.CurrentTheme.Link.linkColor()
+            font = SF; foreground = JBUI.CurrentTheme.Link.Foreground.ENABLED
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            border = JBUI.Borders.empty(4, 8)
-            addMouseListener(object : java.awt.event.MouseAdapter() {
-                override fun mouseClicked(e: java.awt.event.MouseEvent) { cards.show(cardPanel, LIST) }
-                override fun mouseEntered(e: java.awt.event.MouseEvent) { background = UIUtil.getTableSelectionBackground(false); isOpaque = true }
-                override fun mouseExited(e: java.awt.event.MouseEvent) { isOpaque = false }
+            border = JBUI.Borders.empty(8, 12)
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) { cards.show(cardPanel, LIST) }
+                override fun mouseEntered(e: MouseEvent) { foreground = JBUI.CurrentTheme.Link.Foreground.HOVERED }
+                override fun mouseExited(e: MouseEvent) { foreground = JBUI.CurrentTheme.Link.Foreground.ENABLED }
             })
         }
-        detailContainer.add(JPanel(BorderLayout()).apply { background = UIUtil.getTableBackground(); border = JBUI.Borders.empty(0, 0, 1, 0); add(back, BorderLayout.WEST) }, BorderLayout.NORTH)
+        detailContainer.add(JPanel(BorderLayout()).apply { background = UIUtil.getTableBackground(); border = JBUI.Borders.customLineBottom(UIUtil.getBoundsColor()); add(back, BorderLayout.WEST) }, BorderLayout.NORTH)
         detailContainer.add(c, BorderLayout.CENTER)
         cards.show(cardPanel, DETAIL)
     }
@@ -178,17 +292,17 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
     private fun buildIssueDetail(i: Issue) = IssueDetailPanel(provider, remoteOwner ?: "", remoteRepo ?: "", i, onBack = { cards.show(cardPanel, LIST) }, onRefresh = { refresh() })
 
     private fun buildPRDetail(p: PullRequest): JComponent {
-        val panel = JPanel(BorderLayout()).apply { border = JBUI.Borders.empty(8, 10) }
-        panel.add(JPanel(BorderLayout()).apply { isOpaque = false; add(StateBadge().apply { setPRState(p.state) }, BorderLayout.WEST); add(JBLabel("  #${p.id} ${p.title}").apply { font = JBUI.Fonts.label(13f).asBold() }, BorderLayout.CENTER) }, BorderLayout.NORTH)
-        panel.add(JBLabel("${p.sourceBranch} \u2192 ${p.targetBranch} \u00B7 ${fmt(p.updatedAt)}").apply { font = SF; foreground = UIUtil.getContextHelpForeground() }, BorderLayout.CENTER)
-        panel.add(flatIconBtn(AllIcons.Ide.External_link_arrow, "Open in browser") { BrowserUtil.browse(p.url) }, BorderLayout.SOUTH)
+        val panel = JPanel(BorderLayout()).apply { border = JBUI.Borders.empty(12) }
+        panel.add(JPanel(BorderLayout()).apply { isOpaque = false; add(StateBadge().apply { setPRState(p.state) }, BorderLayout.WEST); add(JBLabel("  #${p.id} ${p.title}").apply { font = JBUI.Fonts.label(14f).asBold() }, BorderLayout.CENTER) }, BorderLayout.NORTH)
+        panel.add(JBLabel("${p.sourceBranch} → ${p.targetBranch} · ${fmt(p.updatedAt)}").apply { font = SF; foreground = UIUtil.getContextHelpForeground(); border = JBUI.Borders.emptyTop(8) }, BorderLayout.CENTER)
+        panel.add(JButton("Open in Browser", AllIcons.Ide.External_link_arrow).apply { addActionListener { BrowserUtil.browse(p.url) } }, BorderLayout.SOUTH)
         return panel
     }
 
     private fun buildBranchDetail(b: GitBranch): JComponent {
-        val panel = JPanel(BorderLayout()).apply { border = JBUI.Borders.empty(8, 10) }
-        panel.add(JBLabel(b.name).apply { font = JBUI.Fonts.label(13f).asBold() }, BorderLayout.NORTH)
-        val acts = JPanel(FlowLayout(FlowLayout.LEFT, 4, 4)).apply { isOpaque = false
+        val panel = JPanel(BorderLayout()).apply { border = JBUI.Borders.empty(12) }
+        panel.add(JBLabel(b.name).apply { font = JBUI.Fonts.label(14f).asBold() }, BorderLayout.NORTH)
+        val acts = JPanel(FlowLayout(FlowLayout.LEFT, 4, 8)).apply { isOpaque = false
             add(JButton("Checkout", AllIcons.Vcs.Branch).apply { addActionListener { checkout(b.name) } })
             add(JButton(AllIcons.Ide.External_link_arrow).apply { addActionListener { BrowserUtil.browse("https://github.com/${remoteOwner}/${remoteRepo}/tree/${b.name}") } })
         }
@@ -196,33 +310,25 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
         return panel
     }
 
-    // ── Filters ────────────────────────────────────────────────
-    private fun filterIssues() {
-        val f = issueFilter.selectedItem as? String ?: "All"
-        issueModel.clear(); issueData.filter { when (f) { "Open" -> it.state == IssueState.OPEN; "Closed" -> it.state == IssueState.CLOSED; else -> true } }.forEach { issueModel.addElement(it) }
-    }
-    private fun filterPRs() {
-        val f = prFilter.selectedItem as? String ?: "Open"
-        prModel.clear(); prData.filter { when (f) { "Open" -> it.state == PRState.OPEN; "Merged" -> it.state == PRState.MERGED; "Closed" -> it.state == PRState.CLOSED; else -> true } }.forEach { prModel.addElement(it) }
-    }
-
-    // ── Data ───────────────────────────────────────────────────
     fun reloadConfig() {
         remoteDetected = gitDetector.hasRemote() && provider.isConfigured()
         if (remoteDetected) {
             val info = gitDetector.detect()
-            if (info != null) { remoteOwner = info.owner; remoteRepo = info.repoName; repoLabel.text = "${info.owner}/${info.repoName}"; branchLabel.text = "  \u00B7  ${info.currentBranch ?: "unknown"}" }
+            if (info != null) { remoteOwner = info.owner; remoteRepo = info.repoName; repoLabel.text = "${info.owner}/${info.repoName}"; branchLabel.text = "  ·  ${info.currentBranch ?: "unknown"}" }
             refresh()
         } else {
-            repoLabel.text = if (!gitDetector.hasRemote()) "No remote" else "No token"; branchLabel.text = ""
-            statusLabel.text = if (!gitDetector.hasRemote()) "Set a git remote first" else "Configure token in Settings \u2699"; clearAll()
+            repoLabel.text = if (!gitDetector.hasRemote()) "No remote" else "No token"
+            branchLabel.text = ""
+            statusLabel.text = if (!gitDetector.hasRemote()) "Set a git remote first" else "Configure token in Settings"
+            issueData = emptyList(); prData = emptyList(); branchData = emptyList()
+            renderIssues(); renderPRs(); renderBranches()
         }
     }
 
     fun refresh() {
         if (remoteOwner == null || remoteRepo == null) { reloadConfig(); return }
         cards.show(cardPanel, LIST); statusLabel.text = "Loading..."; statusLabel.foreground = UIUtil.getContextHelpForeground()
-        skeleton()
+
         thread {
             try {
                 val issues = runBlocking { provider.getIssues(remoteOwner!!, remoteRepo!!, "open", null, null) }
@@ -230,101 +336,68 @@ class RemoteVcsToolWindowPanel(project: Project) : SimpleToolWindowPanel(true, t
                 val prs = runBlocking { provider.getPullRequests(remoteOwner!!, remoteRepo!!, "open") }
                 val branches = runBlocking { provider.getBranches(remoteOwner!!, remoteRepo!!) }
                 SwingUtilities.invokeLater {
-                    issueData = issues + closed; filterIssues(); prData = prs; filterPRs()
-                    branchModel.clear(); branches.forEach { branchModel.addElement(it) }
+                    issueData = issues + closed; renderIssues()
+                    prData = prs; renderPRs()
+                    branchData = branches; renderBranches()
+
                     tabPane.setTitleAt(0, "Issues (${issues.size})")
-                    statusLabel.text = "${issues.size} open, ${prs.size} PRs, ${branches.size} branches"; statusLabel.foreground = UIUtil.getActiveTextColor()
+                    tabPane.setTitleAt(1, "PRs (${prs.size})")
+                    tabPane.setTitleAt(2, "Branches (${branches.size})")
+                    statusLabel.text = "Synced successfully"; statusLabel.foreground = UIUtil.getActiveTextColor()
                 }
             } catch (e: Exception) {
-                SwingUtilities.invokeLater { statusLabel.text = "Error: ${e.message}"; statusLabel.foreground = UIUtil.getErrorForeground()
-                    JBPopupFactory.getInstance().createHtmlTextBalloonBuilder(e.message ?: "", MessageType.ERROR, null).setTitle("Failed").createBalloon().show(JBPopupFactory.getInstance().guessBestPopupLocation(tabPane), Balloon.Position.below) }
+                SwingUtilities.invokeLater { statusLabel.text = "Error syncing data"; statusLabel.foreground = UIUtil.getErrorForeground()
+                    JBPopupFactory.getInstance().createHtmlTextBalloonBuilder(e.message ?: "Failed to fetch data", MessageType.ERROR, null).setTitle("Sync Failed").createBalloon().show(JBPopupFactory.getInstance().guessBestPopupLocation(tabPane), Balloon.Position.below) }
             }
         }
     }
-
-    private fun skeleton() { issueModel.clear(); prModel.clear(); branchModel.clear(); repeat(3) { issueModel.addElement(null); prModel.addElement(null); branchModel.addElement(null) } }
-    private fun clearAll() { issueModel.clear(); prModel.clear(); branchModel.clear(); issueData = emptyList(); prData = emptyList() }
 
     private fun checkout(name: String) {
         try { val r = gitDetector.detect()?.gitRoot ?: return; Runtime.getRuntime().exec(arrayOf("git", "checkout", name), null, r); JOptionPane.showMessageDialog(null, "Switched to $name") }
         catch (e: Exception) { JOptionPane.showMessageDialog(null, "Failed: ${e.message}", "Error", JOptionPane.ERROR_MESSAGE) }
     }
 
-    private fun createIssue() { val o = remoteOwner ?: return; val r = remoteRepo ?: return; CreateIssueDialog(myProject, o, r, provider); refresh() }
-    private fun flatIconBtn(icon: javax.swing.Icon, tip: String, action: () -> Unit) = javax.swing.JButton(icon).apply { isOpaque = false; border = JBUI.Borders.empty(2, 4); isBorderPainted = false; toolTipText = tip; addActionListener { action() } }
-
-    // ── Renderers ──────────────────────────────────────────────
-
-    private open class IssueCardRenderer : JPanel(BorderLayout()), ListCellRenderer<Issue?> {
-        private val title = JLabel().apply { font = JBUI.Fonts.label() }
-        private val meta = JLabel().apply { font = SF; foreground = UIUtil.getContextHelpForeground() }
-        private val badge = StateBadge()
-        private val actions = JPanel(FlowLayout(FlowLayout.RIGHT, 2, 0)).apply { isOpaque = false }
-        private val openBtn = JButton(AllIcons.Ide.External_link_arrow); private val copyBtn = JButton(AllIcons.Actions.Copy)
-        private var url: String? = null
-        init {
-            openBtn.apply { isOpaque = false; border = JBUI.Borders.empty(1, 3); isBorderPainted = false; isVisible = false; addActionListener { url?.let { BrowserUtil.browse(it) } } }
-            copyBtn.apply { isOpaque = false; border = JBUI.Borders.empty(1, 3); isBorderPainted = false; isVisible = false; addActionListener { url?.let { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(it), null) } } }
-            actions.add(openBtn); actions.add(copyBtn)
-        }
-        override fun getListCellRendererComponent(list: JList<out Issue?>, i: Issue?, idx: Int, sel: Boolean, foc: Boolean): Component {
-            removeAll()
-            if (i == null) { add(JPanel().apply { background = UIUtil.getTableBackground(); border = CP; preferredSize = Dimension(0, 34) }); return this }
-            url = i.url; title.text = "#${i.number} ${i.title}"; if (i.title.length > 80) title.text = "#${i.number} ${i.title.take(77)}..."
-            title.foreground = if (sel) UIUtil.getTableSelectionForeground(true) else UIUtil.getLabelForeground()
-            meta.text = "by ${i.author} \u00B7 ${fmt(i.updatedAt)}"; badge.setIssueState(i.state); openBtn.isVisible = sel; copyBtn.isVisible = sel
-            val g = JPanel(GridBagLayout()).apply { isOpaque = false }; val c = GridBagConstraints()
-            c.anchor = GridBagConstraints.WEST; c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(6); g.add(badge, c)
-            c.gridx = 1; c.weightx = 1.0; c.insets = JBUI.insets(0); g.add(title, c)
-            c.gridx = 2; c.weightx = 0.0; c.insets = JBUI.insets(0); g.add(actions, c)
-            c.gridx = 0; c.gridy = 1; c.gridwidth = 3; c.weightx = 0.0; c.insets = JBUI.insetsTop(1); g.add(meta, c)
-            add(g, BorderLayout.CENTER); background = if (sel) UIUtil.getTableSelectionBackground(true) else UIUtil.getTableBackground(); border = CP; return this
-        }
+    private fun createIssue() {
+        val o = remoteOwner ?: return; val r = remoteRepo ?: return
+        CreateIssueDialog(myProject, o, r, provider).showAndGet()
+        refresh()
     }
 
-    private open class PRCardRenderer : JPanel(BorderLayout()), ListCellRenderer<PullRequest?> {
-        private val title = JLabel().apply { font = JBUI.Fonts.label() }; private val meta = JLabel().apply { font = SF; foreground = UIUtil.getContextHelpForeground() }; private val badge = StateBadge()
-        override fun getListCellRendererComponent(list: JList<out PullRequest?>, p: PullRequest?, idx: Int, sel: Boolean, foc: Boolean): Component {
-            removeAll()
-            if (p == null) { add(JPanel().apply { background = UIUtil.getTableBackground(); border = CP; preferredSize = Dimension(0, 34) }); return this }
-            title.text = if (p.title.length > 80) "#${p.id} ${p.title.take(77)}..." else "#${p.id} ${p.title}"; title.foreground = if (sel) UIUtil.getTableSelectionForeground(true) else UIUtil.getLabelForeground()
-            meta.text = "${p.sourceBranch} \u2192 ${p.targetBranch} \u00B7 ${fmt(p.updatedAt)}"; badge.setPRState(p.state)
-            val g = JPanel(GridBagLayout()).apply { isOpaque = false }; val c = GridBagConstraints()
-            c.anchor = GridBagConstraints.WEST; c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(6); g.add(badge, c)
-            c.gridx = 1; c.weightx = 1.0; c.insets = JBUI.insets(0); g.add(title, c)
-            c.gridx = 0; c.gridy = 1; c.gridwidth = 2; c.weightx = 0.0; c.insets = JBUI.insetsTop(1); g.add(meta, c)
-            add(g, BorderLayout.CENTER); background = if (sel) UIUtil.getTableSelectionBackground(true) else UIUtil.getTableBackground(); border = CP; return this
-        }
+    private fun createPR() {
+        val o = remoteOwner ?: return; val r = remoteRepo ?: return
+        // Fallback to browser if API PR creation isn't fully robust, or pop a dialog
+        // This opens the compare page on GitHub which is standard for most JetBrains plugins handling PRs
+        BrowserUtil.browse("https://github.com/$o/$r/compare")
     }
 
-    private open class BranchCardRenderer : JPanel(GridBagLayout()), ListCellRenderer<GitBranch?> {
-        private val name = JLabel().apply { font = Font(Font.MONOSPACED, Font.PLAIN, 11) }; private val sha = JLabel().apply { font = Font(Font.MONOSPACED, Font.PLAIN, 10); foreground = UIUtil.getContextHelpForeground() }
-        override fun getListCellRendererComponent(list: JList<out GitBranch?>, b: GitBranch?, idx: Int, sel: Boolean, foc: Boolean): Component {
-            removeAll()
-            if (b == null) { add(JPanel().apply { background = UIUtil.getTableBackground(); border = CP; preferredSize = Dimension(0, 30) }); return this }
-            name.text = b.name; name.foreground = if (sel) UIUtil.getTableSelectionForeground(true) else UIUtil.getLabelForeground(); sha.text = b.sha.take(7)
-            val c = GridBagConstraints()
-            if (b.isDefault) { c.gridx = 0; c.weightx = 0.0; c.insets = JBUI.insetsRight(4); c.anchor = GridBagConstraints.WEST; add(JLabel(AllIcons.Vcs.Branch), c) }
-            c.gridx = if (b.isDefault) 1 else 0; c.weightx = 1.0; c.anchor = GridBagConstraints.WEST; c.insets = JBUI.insets(0, if (b.isDefault) 0 else 4, 0, 4)
-            add(name, c)
-            c.gridx = 2; c.weightx = 0.0; c.anchor = GridBagConstraints.EAST; c.insets = JBUI.insets(0)
-            add(sha, c)
-            background = if (sel) UIUtil.getTableSelectionBackground(true) else UIUtil.getTableBackground(); border = CP; return this
-        }
+    private fun flatIconBtn(icon: javax.swing.Icon, tip: String, action: () -> Unit) = JButton(icon).apply {
+        isOpaque = false; border = JBUI.Borders.empty(4); isContentAreaFilled = false; toolTipText = tip;
+        addActionListener { action() }
     }
 }
 
 class CreateIssueDialog(project: Project?, private val owner: String, private val repo: String, private val provider: GitHubProvider) : com.intellij.openapi.ui.DialogWrapper(project) {
-    private val tf = JBTextField().apply { emptyText.text = "Issue title" }; private val ta = JBTextArea().apply { emptyText.text = "Describe..."; lineWrap = true; rows = 6 }
+    private val tf = JBTextField().apply { emptyText.text = "Issue title" }
+    private val ta = JBTextArea().apply { emptyText.text = "Leave a description..."; lineWrap = true; rows = 6; font = Font(Font.MONOSPACED, Font.PLAIN, JBUI.Fonts.label().size) }
     init { title = "New Issue — $owner/$repo"; init() }
     override fun createCenterPanel(): JComponent = JPanel(BorderLayout()).apply {
-        add(com.intellij.util.ui.FormBuilder.createFormBuilder().addLabeledComponent("Title:", tf, true).addVerticalGap(4).addLabeledComponent("Description:", JBScrollPane(ta), true).panel.apply { border = JBUI.Borders.empty(8, 10); preferredSize = Dimension(480, 280) }, BorderLayout.CENTER)
+        add(com.intellij.util.ui.FormBuilder.createFormBuilder()
+            .addLabeledComponent("Title:", tf, true).addVerticalGap(8)
+            .addLabeledComponent("Description:", JBScrollPane(ta), true).panel.apply { border = JBUI.Borders.empty(8); preferredSize = Dimension(500, 300) }, BorderLayout.CENTER)
     }
     override fun doOKAction() {
         val t = tf.text.trim()
-        if (t.isBlank()) { com.intellij.openapi.ui.Messages.showErrorDialog("Title required.", "Error"); return }
-        ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(null, "Creating...", true) {
-            override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) { indicator.isIndeterminate = true; try { runBlocking { provider.createIssue(owner, repo, t, ta.text.ifBlank { null }) }; ApplicationManager.getApplication().invokeLater { this@CreateIssueDialog.doOKAction() } } catch (e: Exception) { ApplicationManager.getApplication().invokeLater { com.intellij.openapi.ui.Messages.showErrorDialog("Failed: ${e.message}", "Error") } } }
+        if (t.isBlank()) { com.intellij.openapi.ui.Messages.showErrorDialog("Title is required to create an issue.", "Validation Error"); return }
+        ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(null, "Pushing issue...", true) {
+            override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
+                indicator.isIndeterminate = true
+                try {
+                    runBlocking { provider.createIssue(owner, repo, t, ta.text.ifBlank { null }) }
+                    ApplicationManager.getApplication().invokeLater { this@CreateIssueDialog.close(OK_EXIT_CODE) }
+                } catch (e: Exception) {
+                    ApplicationManager.getApplication().invokeLater { com.intellij.openapi.ui.Messages.showErrorDialog("Failed: ${e.message}", "Error") }
+                }
+            }
         })
     }
 }
