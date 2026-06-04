@@ -1,0 +1,118 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.itsjeel01.remoteVcsManager</id>
+    <name>Remote VCS Manager</name>
+    <version>1.0-SNAPSHOT</version>
+    <vendor url="https://github.com/itsjeel01">itsjeel01</vendor>
+
+    <idea-version since-build="252.25557" />
+
+    <description><![CDATA[
+        <h2>Remote VCS Manager</h2>
+        <p>A plugin for managing remote version control systems directly from your JetBrains IDE.</p>
+        <h3>Features:</h3>
+        <ul>
+            <li>Browse your GitHub repositories</li>
+            <li>Clone repositories from remote providers</li>
+            <li>Create new repositories on GitHub</li>
+            <li>Open files on GitHub with one click</li>
+            <li>Add GitHub repositories as remotes</li>
+            <li>View pull requests for your repositories</li>
+        </ul>
+        <p>Initially supports GitHub, designed to be extensible for other providers.</p>
+        <br/>
+        <em>Compatible with Android Studio and all JetBrains IDEs</em>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <b>1.0-SNAPSHOT</b>
+        <ul>
+            <li>Initial release</li>
+            <li>GitHub integration with PAT authentication</li>
+            <li>Browse and clone repositories</li>
+            <li>Create new repositories</li>
+            <li>Open files on GitHub</li>
+            <li>Add remote repositories to projects</li>
+            <li>Settings page for token management</li>
+        </ul>
+    ]]></change-notes>
+
+    <!-- Product and plugin compatibility -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Notification group -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Notification group for plugin notifications -->
+        <notificationGroup
+                id="Remote VCS Manager"
+                displayType="BALLOON"
+                key="Remote VCS Manager"/>
+
+        <!-- Settings persistence -->
+        <!-- Settings persistence -->
+        <applicationService
+                serviceImplementation="com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState"/>
+
+        <!-- Settings page under Tools -->
+        <!-- Settings page under Tools -->
+        <applicationConfigurable
+                id="remotevcsmanager.settings"
+                displayName="Remote VCS Manager"
+                parentId="tools"
+                instance="com.itsjeel01.remotevcsmanager.settings.RemoteVcsConfigurable"/>
+
+        <!-- Tool window -->
+        <toolWindow
+                id="Remote VCS"
+                anchor="right"
+                secondary="true"
+                icon="/META-INF/pluginIcon.svg"
+                factoryClass="com.itsjeel01.remotevcsmanager.ui.RemoteVcsToolWindowFactory"/>
+
+        <!-- Startup activity -->
+        <postStartupActivity
+                implementation="com.itsjeel01.remotevcsmanager.RemoteVcsManagerProjectActivity"/>
+    </extensions>
+
+    <!-- Actions -->
+    <actions>
+        <!-- Editor popup action: Open on GitHub -->
+        <action
+                id="RemoteVcsManager.OpenOnRemote"
+                class="com.itsjeel01.remotevcsmanager.actions.OpenOnRemoteAction"
+                text="Open on GitHub"
+                description="Open current file on GitHub"
+                icon="/icons/openInBrowser.svg">
+            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopyPaths"/>
+        </action>
+
+        <!-- VCS menu actions group -->
+        <group id="RemoteVcsManager.ActionsGroup"
+               text="Remote VCS"
+               description="Remote VCS Manager actions"
+               popup="true">
+            <add-to-group group-id="VcsGroups" anchor="last"/>
+
+            <action
+                    id="RemoteVcsManager.CloneRepository"
+                    class="com.itsjeel01.remotevcsmanager.actions.CloneRepositoryAction"
+                    text="Clone Repository..."
+                    description="Clone a remote repository"
+                    icon="/icons/clone.svg"/>
+
+            <action
+                    id="RemoteVcsManager.CreateRepository"
+                    class="com.itsjeel01.remotevcsmanager.actions.CreateRepositoryAction"
+                    text="Create Repository on GitHub..."
+                    description="Create a new repository on GitHub"
+                    icon="/icons/create.svg"/>
+
+            <action
+                    id="RemoteVcsManager.AddRemote"
+                    class="com.itsjeel01.remotevcsmanager.actions.AddRemoteAction"
+                    text="Add Remote from GitHub..."
+                    description="Add a GitHub repository as a remote to this project"
+                    icon="/icons/addRemote.svg"/>
+        </group>
+    </actions>
+</idea-plugin>
