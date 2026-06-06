@@ -364,6 +364,28 @@ class GitHubApiClient(
     }
 
     /**
+     * Get commits for a pull request.
+     */
+    fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): Result<List<JsonObject>> {
+        val path = "/repos/${encodePath(owner)}/${encodePath(repo)}/pulls/$prNumber/commits?per_page=50"
+        val request = buildGetRequest(path)
+        return executeRequest(request).map { body ->
+            parseJson(body).asJsonArray.map { it.asJsonObject }
+        }
+    }
+
+    /**
+     * Get all labels for a repository.
+     */
+    fun getLabels(owner: String, repo: String): Result<List<JsonObject>> {
+        val path = "/repos/${encodePath(owner)}/${encodePath(repo)}/labels?per_page=100"
+        val request = buildGetRequest(path)
+        return executeRequest(request).map { body ->
+            parseJson(body).asJsonArray.map { it.asJsonObject }
+        }
+    }
+
+    /**
      * Build a URL to open a specific file on GitHub.
      */
     fun getFileUrl(

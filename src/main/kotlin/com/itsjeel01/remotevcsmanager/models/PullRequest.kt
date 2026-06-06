@@ -5,6 +5,7 @@ package com.itsjeel01.remotevcsmanager.models
  */
 data class PullRequest(
     val id: String,
+    val number: Int,
     val title: String,
     val description: String?,
     val url: String,

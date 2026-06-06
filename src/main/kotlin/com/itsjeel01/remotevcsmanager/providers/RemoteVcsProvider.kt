@@ -1,8 +1,10 @@
 package com.itsjeel01.remotevcsmanager.providers
 
+import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.GitBranch
 import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
+import com.itsjeel01.remotevcsmanager.models.Label
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.models.RemoteAccount
 import com.itsjeel01.remotevcsmanager.models.RemoteRepository
@@ -59,6 +61,12 @@ abstract class RemoteVcsProvider {
 
     // Branches API
     abstract suspend fun getBranches(owner: String, repo: String): List<GitBranch>
+
+    // Pull Request Commits
+    abstract suspend fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): List<CommitSummary>
+
+    // Labels
+    abstract suspend fun getLabels(owner: String, repo: String): List<Label>
 
     abstract fun getFileUrl(owner: String, repo: String, filePath: String, branch: String, lineNumber: Int? = null): String
     abstract fun getCloneUrl(owner: String, repo: String, useSsh: Boolean = false): String

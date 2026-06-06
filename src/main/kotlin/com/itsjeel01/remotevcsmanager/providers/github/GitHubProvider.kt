@@ -1,9 +1,11 @@
 package com.itsjeel01.remotevcsmanager.providers.github
 
+import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.GitBranch
 import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.models.IssueState
+import com.itsjeel01.remotevcsmanager.models.Label
 import com.itsjeel01.remotevcsmanager.models.PRState
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.models.RemoteAccount
@@ -155,6 +157,30 @@ class GitHubProvider(
         }
     }
 
+    override suspend fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): List<CommitSummary> {
+        val result = apiClient.getPullRequestCommits(owner, repo, prNumber)
+        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list PR commits")
+        return result.getOrNull()!!.map { json ->
+            val commit = apiClient.safeObject(json, "commit")
+            CommitSummary(
+                sha = apiClient.safeString(json, "sha") ?: "",
+                message = if (commit != null) apiClient.safeString(commit, "message")?.lines()?.firstOrNull() ?: "" else "",
+                url = apiClient.safeString(json, "html_url") ?: ""
+            )
+        }
+    }
+
+    override suspend fun getLabels(owner: String, repo: String): List<Label> {
+        val result = apiClient.getLabels(owner, repo)
+        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list labels")
+        return result.getOrNull()!!.map { json ->
+            Label(
+                name = apiClient.safeString(json, "name") ?: "",
+                color = apiClient.safeString(json, "color") ?: "888888"
+            )
+        }
+    }
+
     override fun getFileUrl(owner: String, repo: String, filePath: String, branch: String, lineNumber: Int?): String =
         apiClient.getFileUrl(owner, repo, filePath, branch, lineNumber)
 
@@ -183,14 +209,17 @@ class GitHubProvider(
         val user = apiClient.safeObject(json, "user")
         val head = apiClient.safeObject(json, "head")
         val base = apiClient.safeObject(json, "base")
-        val merged = json.get("merged")
+        // Use merged_at (not merged boolean) — it's always present in list responses
+        val mergedAt = json.get("merged_at")
+        val isMerged = mergedAt != null && !(mergedAt is com.google.gson.JsonNull) && mergedAt.asString.isNotBlank()
         return PullRequest(
             id = apiClient.safeLong(json, "id").toString(),
+            number = json.get("number")?.asInt ?: 0,
             title = apiClient.safeString(json, "title") ?: "Untitled",
             description = apiClient.safeString(json, "body"),
             url = apiClient.safeString(json, "html_url") ?: "",
             author = if (user != null) apiClient.safeString(user, "login") ?: "unknown" else "unknown",
-            state = parsePRState(apiClient.safeString(json, "state") ?: "open", if (merged is com.google.gson.JsonNull) null else merged?.asBoolean),
+            state = parsePRState(apiClient.safeString(json, "state") ?: "open", isMerged),
             sourceBranch = if (head != null) apiClient.safeString(head, "ref") ?: "unknown" else "unknown",
             targetBranch = if (base != null) apiClient.safeString(base, "ref") ?: "unknown" else "unknown",
             createdAt = apiClient.safeString(json, "created_at") ?: "",
@@ -204,7 +233,9 @@ class GitHubProvider(
         val labelsArr = if (json.has("labels") && !(json.get("labels") is com.google.gson.JsonNull)) {
             json.getAsJsonArray("labels")?.mapNotNull {
                 val labelObj = it.asJsonObject
-                apiClient.safeString(labelObj, "name")
+                val name = apiClient.safeString(labelObj, "name") ?: return@mapNotNull null
+                val color = apiClient.safeString(labelObj, "color") ?: "888888"
+                Label(name = name, color = color)
             } ?: emptyList()
         } else emptyList()
 
@@ -234,8 +265,8 @@ class GitHubProvider(
         )
     }
 
-    private fun parsePRState(state: String, merged: Boolean?): PRState = when {
-        merged == true -> PRState.MERGED
+    private fun parsePRState(state: String, merged: Boolean): PRState = when {
+        merged -> PRState.MERGED
         state == "closed" -> PRState.CLOSED
         else -> PRState.OPEN
     }

@@ -13,10 +13,14 @@ class RemoteVcsToolWindowFactory : ToolWindowFactory, DumbAware {
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         toolWindow.contentManager.addContent(content)
 
-        // Reload config every time the tool window is activated (covers settings changes)
+        // Only reload config on first activation, not every focus change
+        var initialLoad = true
         toolWindow.contentManager.addContentManagerListener(object : com.intellij.ui.content.ContentManagerListener {
             override fun selectionChanged(event: com.intellij.ui.content.ContentManagerEvent) {
-                panel.reloadConfig()
+                if (initialLoad) {
+                    initialLoad = false
+                    panel.reloadConfig()
+                }
             }
         })
     }

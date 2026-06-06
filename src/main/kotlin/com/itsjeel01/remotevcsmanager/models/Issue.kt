@@ -3,6 +3,17 @@ package com.itsjeel01.remotevcsmanager.models
 /**
  * Data model for a GitHub issue.
  */
+data class Label(
+    val name: String,
+    val color: String  // hex color without #, e.g. "3FB950"
+)
+
+data class CommitSummary(
+    val sha: String,
+    val message: String,
+    val url: String
+)
+
 data class Issue(
     val id: String,
     val number: Int,
@@ -12,7 +23,7 @@ data class Issue(
     val url: String,
     val author: String,
     val assignees: List<String>,
-    val labels: List<String>,
+    val labels: List<Label>,
     val commentsCount: Int,
     val createdAt: String,
     val updatedAt: String,
