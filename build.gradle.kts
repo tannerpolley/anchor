@@ -22,6 +22,10 @@ dependencies {
         intellijIdeaCommunity("2025.2.4")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
+
+    // Runtime dependencies bundled with the plugin (not provided by the IDE platform)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 }
 
 intellijPlatform {
