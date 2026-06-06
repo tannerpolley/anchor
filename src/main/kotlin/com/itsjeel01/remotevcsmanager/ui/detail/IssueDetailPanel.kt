@@ -138,17 +138,11 @@ class IssueDetailPanel(
         header.add(metaRow)
         add(header, BorderLayout.NORTH)
 
-        // Scrollable body wrapper with weighty to fill viewport height
-        val bodyWrapper = JPanel(GridBagLayout()).apply { isOpaque = false }
+        // Scrollable body — no wrapper, viewport listener prevents centering
         val body = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS); isOpaque = false
             border = JBUI.Borders.empty(8, 12)
         }
-        bodyWrapper.add(body, GridBagConstraints().apply {
-            gridx = 0; gridy = 0; weightx = 1.0; weighty = 1.0
-            fill = GridBagConstraints.BOTH; anchor = GridBagConstraints.NORTH
-            insets = JBUI.emptyInsets()
-        })
 
         val rendered = MarkdownRenderer.render(issue.body ?: "_No description provided._")
         val descPane = JEditorPane().apply {
@@ -173,8 +167,25 @@ class IssueDetailPanel(
         body.add(commentsPanel)
         body.add(Box.createVerticalGlue())
 
-        scrollPane.setViewportView(bodyWrapper)
+        scrollPane.setViewportView(body)
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER)
+        // Keep content top-aligned: when viewport is taller than content, set body min height
+        var inViewportResize = false
+        scrollPane.viewport.addComponentListener(object : java.awt.event.ComponentAdapter() {
+            override fun componentResized(e: java.awt.event.ComponentEvent) {
+                if (inViewportResize) return
+                inViewportResize = true
+                try {
+                    val vph = scrollPane.viewport.height
+                    val bodyPH = body.preferredSize.height
+                    val newMinH = if (vph > bodyPH) vph else bodyPH
+                    if (body.minimumSize.height != newMinH) {
+                        body.minimumSize = Dimension(0, newMinH)
+                        body.revalidate()
+                    }
+                } finally { inViewportResize = false }
+            }
+        })
         SwingUtilities.invokeLater { scrollPane.viewport.viewPosition = Point(0, 0) }
         add(scrollPane, BorderLayout.CENTER)
 

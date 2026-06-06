@@ -131,16 +131,10 @@ class PullRequestDetailPanel(
         // Content wrapper with tabs
         val contentTabs = JTabbedPane().apply { font = JBUI.Fonts.label() }
 
-        // Conversation tab - weighty/ BOTH to top-align
-        val convBodyWrapper = JPanel(GridBagLayout()).apply { isOpaque = false }
+        // Conversation tab — viewport listener prevents centering
         val convBody = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS); isOpaque = false; border = JBUI.Borders.empty(4, 0)
         }
-        convBodyWrapper.add(convBody, GridBagConstraints().apply {
-            gridx = 0; gridy = 0; weightx = 1.0; weighty = 1.0
-            fill = GridBagConstraints.BOTH; anchor = GridBagConstraints.NORTH
-            insets = JBUI.emptyInsets()
-        })
 
         val rendered = MarkdownRenderer.render(pr.description ?: "_No description provided._")
         val descPane = JEditorPane().apply {
@@ -164,8 +158,24 @@ class PullRequestDetailPanel(
         convBody.add(commentsPanel)
         convBody.add(Box.createVerticalGlue())
 
-        convScroll.setViewportView(convBodyWrapper)
+        convScroll.setViewportView(convBody)
         convScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER)
+        var inResize = false
+        convScroll.viewport.addComponentListener(object : java.awt.event.ComponentAdapter() {
+            override fun componentResized(e: java.awt.event.ComponentEvent) {
+                if (inResize) return
+                inResize = true
+                try {
+                    val vph = convScroll.viewport.height
+                    val bodyPH = convBody.preferredSize.height
+                    val newMinH = if (vph > bodyPH) vph else bodyPH
+                    if (convBody.minimumSize.height != newMinH) {
+                        convBody.minimumSize = Dimension(0, newMinH)
+                        convBody.revalidate()
+                    }
+                } finally { inResize = false }
+            }
+        })
         SwingUtilities.invokeLater { convScroll.viewport.viewPosition = Point(0, 0) }
 
         val convTab = JPanel(BorderLayout()).apply { isOpaque = false; border = JBUI.Borders.empty(4, 12) }
