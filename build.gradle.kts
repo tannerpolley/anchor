@@ -16,12 +16,19 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdea("2025.2.4")
+        // Use Community Edition since this plugin targets all JetBrains IDEs
+        // (platform-only, depends on com.intellij.modules.platform).
+        // IntelliJ IDEA Ultimate bundles Java plugins that aren't needed here.
+        intellijIdeaCommunity("2025.2.4")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
 }
 
 intellijPlatform {
+    // Disable since this plugin has no custom searchable options and
+    // the headless IDE launch fails for platform-only plugins.
+    buildSearchableOptions = false
+
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "252.25557"
