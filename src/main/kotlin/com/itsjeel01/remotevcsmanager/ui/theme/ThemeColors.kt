@@ -7,41 +7,10 @@ import androidx.compose.ui.unit.sp
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.awt.Color as AwtColor
-import javax.swing.UIManager
 
 private fun AwtColor.toComposeColor(): Color =
     Color(red / 255f, green / 255f, blue / 255f, alpha / 255f)
-
-// ── Reactive event sources ───────────────────────────────────────────────
-
-object IdeEvents {
-    private val _theme = MutableStateFlow(0)
-    val theme: StateFlow<Int> = _theme.asStateFlow()
-
-    private val _fonts = MutableStateFlow(0)
-    val fonts: StateFlow<Int> = _fonts.asStateFlow()
-
-    private val _scale = MutableStateFlow(0)
-    val scale: StateFlow<Int> = _scale.asStateFlow()
-
-    init {
-        UIManager.addPropertyChangeListener { e ->
-            // Fire on ALL UIManager property changes — these only happen on explicit
-            // user actions (theme switch, zoom, font size, DPI scale) and are rare.
-            // This guarantees we never miss a zoom/font/theme change regardless of
-            // the exact property name IntelliJ fires.
-            _theme.value++
-            _fonts.value++
-            _scale.value++
-        }
-    }
-}
-
-// ── Named inner classes (avoids Kotlin 2.1 anonymous object type issues) ─
 
 class BgColors {
     val primary: Color  = UIUtil.getPanelBackground().toComposeColor()

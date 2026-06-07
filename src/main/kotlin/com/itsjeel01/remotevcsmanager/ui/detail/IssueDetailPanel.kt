@@ -199,8 +199,6 @@ fun CommentInputBar(
     }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 internal fun bg(fn: suspend () -> Unit, onDone: () -> Unit) {
     ProgressManager.getInstance().run(object : Task.Backgroundable(null, "Processing...", true) {
         override fun run(i: ProgressIndicator) {

@@ -29,16 +29,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.skia.Image as SkiaImage
 
-// ── Block types ───────────────────────────────────────────────────────────
-
 private enum class BlockType { PARAGRAPH, H1, H2, H3, UL, OL, CODE, QUOTE, HR }
 
 private sealed class Fragment {
     data class Text(val annotated: AnnotatedString) : Fragment()
     data class Image(val url: String, val alt: String) : Fragment()
 }
-
-// ── Image cache (LRU memory cache + OkHttp disk cache) ────────────────────
 
 private const val MAX_CACHED_IMAGES = 100
 
@@ -93,8 +89,6 @@ private fun rememberImageBitmap(url: String): ImageBitmap? {
 
 // Conversion uses SkiaImage.makeFromEncoded + toComposeImageBitmap (see above)
 
-// ── Main entry point ──────────────────────────────────────────────────────
-
 object MarkdownCompose {
 
     @Composable
@@ -124,8 +118,6 @@ object MarkdownCompose {
             }
         }
     }
-
-    // ── Block renderers ───────────────────────────────────────────────────
 
     @Composable
     private fun codeBlock(lines: List<String>, start: Int): Int {
@@ -174,8 +166,6 @@ object MarkdownCompose {
         Spacer(Modifier.height(4.dp))
         Divider(color = theme.dividerSubtle, thickness = 0.5.dp)
     }
-
-    // ── Inline renderer (text + images) ───────────────────────────────────
 
     @Composable
     private fun inlineBlock(text: String, type: BlockType) {
@@ -252,8 +242,6 @@ object MarkdownCompose {
                 modifier = Modifier.padding(vertical = 4.dp))
         }
     }
-
-    // ── Fragment parser ───────────────────────────────────────────────────
 
     private fun parseFragments(text: String, theme: ThemeColors): List<Fragment> {
         val result = mutableListOf<Fragment>()

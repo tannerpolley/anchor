@@ -75,8 +75,6 @@ class GitHubProvider(
         return result.getOrNull()!!.map { json -> toPullRequest(json) }
     }
 
-    // ── Issues API ──────────────────────────────────────────────────────────
-
     override suspend fun getIssues(
         owner: String,
         repo: String,
@@ -141,8 +139,6 @@ class GitHubProvider(
         }
     }
 
-    // ── Branches API ───────────────────────────────────────────────────────
-
     override suspend fun getBranches(owner: String, repo: String): List<GitBranch> {
         val result = apiClient.getBranches(owner, repo)
         if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list branches")
@@ -186,8 +182,6 @@ class GitHubProvider(
 
     override fun getCloneUrl(owner: String, repo: String, useSsh: Boolean): String =
         apiClient.getCloneUrl(owner, repo, useSsh)
-
-    // ── Helpers ─────────────────────────────────────────────────────────────
 
     private fun toRemoteRepository(json: com.google.gson.JsonObject): RemoteRepository {
         val owner = apiClient.safeObject(json, "owner")

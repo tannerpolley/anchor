@@ -33,8 +33,6 @@ final class RemoteVcsSettingsState :
         var defaultTokenUrl: String? by string("https://github.com/settings/tokens")
     }
 
-    // ── Token management ────────────────────────────────────────────────
-
     fun getToken(provider: String): String? = state.providerTokens[provider]
 
     fun setToken(provider: String, token: String) {
@@ -51,8 +49,6 @@ final class RemoteVcsSettingsState :
 
     fun getDefaultProvider(): String = state.defaultProvider ?: "github"
     fun setDefaultProvider(provider: String) { state.defaultProvider = provider }
-
-    // ── Preferences ─────────────────────────────────────────────────────
 
     fun getAutoRefresh(): Boolean = state.autoRefresh
     fun setAutoRefresh(value: Boolean) { state.autoRefresh = value }
