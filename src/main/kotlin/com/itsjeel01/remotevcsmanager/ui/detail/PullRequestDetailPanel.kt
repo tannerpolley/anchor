@@ -98,7 +98,7 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
                     else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
                 }, colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent,
                     backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green),
-                    modifier = Modifier.height(26.dp)) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
+                    modifier = Modifier.height(32.dp)) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
             }
         }
     }

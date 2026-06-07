@@ -142,7 +142,7 @@ fun IssueDetailHeader(
                     contentColor = theme.Text.onAccent,
                     backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
                 ),
-                modifier = Modifier.height(26.dp)
+                modifier = Modifier.height(32.dp)
             ) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
         }
     }

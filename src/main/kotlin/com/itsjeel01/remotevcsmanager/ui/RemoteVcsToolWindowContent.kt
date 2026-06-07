@@ -233,13 +233,13 @@ fun HeaderBar(state: ToolWindowState) {
         TextButton(
             onClick = { state.createIssue() },
             colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent),
-            modifier = Modifier.background(theme.Accent.green, RoundedCornerShape(4.dp)).height(26.dp)
+            modifier = Modifier.background(theme.Accent.green, RoundedCornerShape(4.dp)).height(32.dp)
         ) { Text("+ Issue", fontSize = fs.small) }
         Spacer(Modifier.width(6.dp))
         TextButton(
             onClick = { state.createPR() },
             colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent),
-            modifier = Modifier.background(theme.Accent.blue, RoundedCornerShape(4.dp)).height(26.dp)
+            modifier = Modifier.background(theme.Accent.blue, RoundedCornerShape(4.dp)).height(32.dp)
         ) { Text("+ PR", fontSize = fs.small) }
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
