@@ -99,12 +99,17 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
             BranchPill(pr.targetBranch); Spacer(Modifier.weight(1f))
             if (pr.state != PRState.MERGED) {
                 val isOpen = pr.state == PRState.OPEN
-                TextButton(onClick = {
+                Button(onClick = {
                     if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
-                }, colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent,
-                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green),
-                    modifier = Modifier.height(32.dp)) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
+                }, colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green,
+                    contentColor = theme.Text.onAccent
+                ),
+                    elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.height(28.dp)) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
             }
         }
     }
