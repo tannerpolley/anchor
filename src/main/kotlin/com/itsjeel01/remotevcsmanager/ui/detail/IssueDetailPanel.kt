@@ -9,7 +9,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,6 +21,7 @@ import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
+import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
@@ -71,7 +71,6 @@ fun IssueDetailContent(
                 }
                 Spacer(Modifier.height(8.dp))
             }
-            // labels are shown in header now
             if (comments.isNotEmpty()) {
                 item {
                     Text("Comments (${comments.size})", fontWeight = FontWeight.Bold, fontSize = fs.label,
@@ -118,18 +117,8 @@ fun IssueDetailHeader(
             StateBadgeForIssue(issue.state); Spacer(Modifier.width(6.dp))
             Text(issue.author, fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(4.dp))
             Text(fmt(issue.createdAt), fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(6.dp))
-            // Labels inline in header
             issue.labels.take(6).forEach { label ->
-                val chipColor = try {
-                    Color(label.color.substring(0, 2).toInt(16),
-                        label.color.substring(2, 4).toInt(16),
-                        label.color.substring(4, 6).toInt(16))
-                } catch (_: Exception) { Color.Gray }
-                val textColor = if ((chipColor.red * 299 + chipColor.green * 587 + chipColor.blue * 114) / 1000 > 140) Color.Black else Color.White
-                Surface(shape = RoundedCornerShape(4.dp), color = chipColor, modifier = Modifier.padding(end = 3.dp)) {
-                    Text(label.name, color = textColor, fontSize = fs.xsmall,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp))
-                }
+                LabelChip(label = label, modifier = Modifier.padding(end = 3.dp))
             }
             Spacer(Modifier.weight(1f))
             val isOpen = issue.state == IssueState.OPEN

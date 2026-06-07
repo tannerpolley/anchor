@@ -39,7 +39,6 @@ class CreateIssueDialog(
         emptyText.text = "e.g. username (comma-separated)"
     }
 
-    // Label selection
     private val labelChipsPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply { isOpaque = false }
     private val selectedLabels = mutableSetOf<VsLabel>()
     private var repoLabels: List<VsLabel> = emptyList()

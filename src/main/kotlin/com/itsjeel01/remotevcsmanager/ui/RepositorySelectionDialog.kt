@@ -23,23 +23,19 @@ class RepositorySelectionDialog(
         title = "Select Repository to Clone"
         init()
 
-        // Populate list
         repositories.forEach { repo ->
             val label = "${repo.owner}/${repo.name} - ${repo.description ?: "No description"}"
             val icon = if (repo.isPrivate) "🔒" else "🌍"
             listModel.addElement(RemoteRepositoryListItem(repo, "$icon $label"))
         }
 
-        // Set up list renderer
         repositoryList.cellRenderer = DefaultListCellRenderer()
         repositoryList.selectedIndex = 0
 
-        // Set the first repo as default selection
         if (repositories.isNotEmpty()) {
             selectedRepository = repositories[0]
         }
 
-        // Selection listener
         repositoryList.addListSelectionListener {
             val selected = repositoryList.selectedValue
             selectedRepository = selected?.repository

@@ -160,7 +160,6 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
             .fillMaxWidth()
             .clickable { state.showIssueDetail(issue) }
     ) {
-        // 1. Title Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -184,7 +183,6 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
             )
         }
 
-        // 2. Metadata Row (Badge + Text)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -230,7 +228,6 @@ fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
             .fillMaxWidth()
             .clickable { state.showPRDetail(pr) }
     ) {
-        // 1. Title Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -254,7 +251,6 @@ fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
             )
         }
 
-        // 2. Metadata Row (Badge + Branch Info)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
