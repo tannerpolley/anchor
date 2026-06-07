@@ -128,15 +128,17 @@ fun IssueDetailHeader(
             }
             Spacer(Modifier.weight(1f))
             val isOpen = issue.state == IssueState.OPEN
-            TextButton(
+            Button(
                 onClick = {
                     if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = theme.Text.onAccent,
-                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green,
+                    contentColor = theme.Text.onAccent
                 ),
+                elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(4.dp),
                 modifier = Modifier.height(32.dp)
             ) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
         }
