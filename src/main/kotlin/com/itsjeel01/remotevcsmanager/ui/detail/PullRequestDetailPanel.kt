@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.IssueComment
@@ -21,8 +22,10 @@ import com.itsjeel01.remotevcsmanager.models.PRState
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.BranchPill
+import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
+import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForPR
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
@@ -90,7 +93,9 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) { Text("←", fontSize = fs.title, color = theme.Text.primary) }
             Text("#${pr.number} ${pr.title}", fontWeight = FontWeight.Bold, fontSize = fs.title, color = theme.Text.primary,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            TextButton(onClick = { BrowserUtil.browse(pr.url) }) { Text("↗", fontSize = fs.small, color = theme.Text.link) }
+            IconButton(onClick = { BrowserUtil.browse(pr.url) }) {
+                PlatformIcon(AllIcons.Ide.External_link_arrow, contentDescription = "Open in browser")
+            }
         }
         Row(modifier = Modifier.padding(start = 48.dp), verticalAlignment = Alignment.CenterVertically) {
             StateBadgeForPR(pr.state); Spacer(Modifier.width(6.dp))

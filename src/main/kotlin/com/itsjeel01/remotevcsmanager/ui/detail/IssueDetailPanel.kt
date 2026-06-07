@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
@@ -23,6 +24,7 @@ import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
+import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
@@ -111,14 +113,14 @@ fun IssueDetailHeader(
             .fillMaxWidth()
             .background(theme.Bg.surface).padding(8.dp, 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) {
-                Text("←", fontSize = fs.title, color = theme.Text.primary)
+            IconButton(onClick = onBack) {
+                PlatformIcon(AllIcons.Actions.Back, contentDescription = "Back")
             }
             Text("#${issue.number} ${issue.title}", fontWeight = FontWeight.Bold, fontSize = fs.title,
                 color = theme.Text.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
-            TextButton(onClick = { BrowserUtil.browse(issue.url) }) {
-                Text("↗", fontSize = fs.small, color = theme.Text.link)
+            IconButton(onClick = { BrowserUtil.browse(issue.url) }) {
+                PlatformIcon(AllIcons.Ide.External_link_arrow, contentDescription = "Open in browser")
             }
         }
         Row(modifier = Modifier.padding(start = 48.dp), verticalAlignment = Alignment.CenterVertically) {
