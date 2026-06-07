@@ -25,7 +25,6 @@ import com.itsjeel01.remotevcsmanager.ui.components.BranchPill
 import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
-import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForPR
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
@@ -92,12 +91,12 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) { Text("←", fontSize = fs.title, color = theme.Text.primary) }
             Text("#${pr.number} ${pr.title}", fontWeight = FontWeight.Bold, fontSize = fs.title, color = theme.Text.primary,
-                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             IconButton(onClick = { BrowserUtil.browse(pr.url) }) {
                 PlatformIcon(AllIcons.Ide.External_link_arrow, contentDescription = "Open in browser")
             }
         }
-        Row(modifier = Modifier.padding(start = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             StateBadgeForPR(pr.state); Spacer(Modifier.width(6.dp))
             Text(pr.author, fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(4.dp))
             Text(fmt(pr.createdAt), fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(6.dp))
@@ -112,7 +111,7 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
                         if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
                         else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
                     },
-                    variant = if (isOpen) ButtonVariant.Danger else ButtonVariant.Secondary
+                    variant = ButtonVariant.Primary
                 )
             }
         }

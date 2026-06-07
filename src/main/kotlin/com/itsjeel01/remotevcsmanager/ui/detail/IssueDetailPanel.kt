@@ -111,7 +111,9 @@ fun IssueDetailHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(theme.Bg.surface).padding(8.dp, 12.dp)) {
+            .background(theme.Bg.surface)
+            .padding(8.dp, 12.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 PlatformIcon(AllIcons.Actions.Back, contentDescription = "Back")
@@ -123,8 +125,9 @@ fun IssueDetailHeader(
                 PlatformIcon(AllIcons.Ide.External_link_arrow, contentDescription = "Open in browser")
             }
         }
-        Row(modifier = Modifier.padding(start = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-            StateBadgeForIssue(issue.state); Spacer(Modifier.width(6.dp))
+        Row(modifier = Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            StateBadgeForIssue(issue.state);
+            Spacer(Modifier.width(6.dp))
             Text(issue.author, fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(4.dp))
             Text(fmt(issue.createdAt), fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(6.dp))
             issue.labels.take(6).forEach { label ->
@@ -138,7 +141,7 @@ fun IssueDetailHeader(
                     if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
-                variant = if (isOpen) ButtonVariant.Danger else ButtonVariant.Secondary
+                variant = ButtonVariant.Primary
             )
         }
     }
