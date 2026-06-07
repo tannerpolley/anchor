@@ -22,12 +22,7 @@ import com.itsjeel01.remotevcsmanager.models.*
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadge
 import com.itsjeel01.remotevcsmanager.ui.detail.IssueDetailContent
 import com.itsjeel01.remotevcsmanager.ui.detail.PullRequestDetailContent
-import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
-import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
-import com.itsjeel01.remotevcsmanager.ui.theme.PlatformFonts
-import com.itsjeel01.remotevcsmanager.ui.theme.rememberPlatformFonts
-import com.itsjeel01.remotevcsmanager.ui.theme.rememberThemeColors
-
+import com.itsjeel01.remotevcsmanager.ui.theme.*
 
 @Composable
 fun RemoteVcsToolWindowContent(project: Project) {
@@ -35,19 +30,27 @@ fun RemoteVcsToolWindowContent(project: Project) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
 
-    CompositionLocalProvider(
-        LocalThemeColors provides theme,
-        LocalPlatformFonts provides fs
-    ) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.Bg.primary).onKeyEvent { event ->
-            if (event.type == KeyEventType.KeyUp) {
-                when {
-                    event.key == Key.R && state.activeScreen is Screen.List -> { state.refresh(); true }
-                    event.key == Key.Escape && state.activeScreen is Screen.Detail -> { state.backToList(); true }
-                    else -> false
+    CompositionLocalProvider(LocalThemeColors provides theme, LocalPlatformFonts provides fs) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.Bg.primary)
+                .onKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyUp) {
+                        when {
+                            event.key == Key.R && state.activeScreen is Screen.List -> {
+                                state.refresh()
+                                true
+                            }
+                            event.key == Key.Escape && state.activeScreen is Screen.Detail -> {
+                                state.backToList()
+                                true
+                            }
+                            else -> false
+                        }
+                    } else false
                 }
-            } else false
-        }) {
+        ) {
             when (state.activeScreen) {
                 is Screen.List -> MainListScreen(state)
                 is Screen.Detail -> DetailScreen(state)
@@ -60,29 +63,41 @@ fun RemoteVcsToolWindowContent(project: Project) {
 fun MainListScreen(state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
+    var activeTab by remember { mutableIntStateOf(0) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         HeaderBar(state)
-        var activeTab by remember { mutableIntStateOf(0) }
+
         TabRow(selectedTabIndex = activeTab, backgroundColor = theme.Bg.primary) {
-            Tab(selected = activeTab == 0, onClick = { activeTab = 0 }, selectedContentColor = theme.Text.primary,
-                unselectedContentColor = theme.Text.secondary) {
+            Tab(
+                selected = activeTab == 0, onClick = { activeTab = 0 },
+                selectedContentColor = theme.Text.primary,
+                unselectedContentColor = theme.Text.secondary
+            ) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text("Issues (${state.issueData.size})", fontSize = fs.label)
+                    TabLabel("Issues", state.issueData.size, fs)
                 }
             }
-            Tab(selected = activeTab == 1, onClick = { activeTab = 1 }, selectedContentColor = theme.Text.primary,
-                unselectedContentColor = theme.Text.secondary) {
+            Tab(
+                selected = activeTab == 1, onClick = { activeTab = 1 },
+                selectedContentColor = theme.Text.primary,
+                unselectedContentColor = theme.Text.secondary
+            ) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text("PRs (${state.prData.size})", fontSize = fs.label)
+                    TabLabel("PRs", state.prData.size, fs)
                 }
             }
-            Tab(selected = activeTab == 2, onClick = { activeTab = 2 }, selectedContentColor = theme.Text.primary,
-                unselectedContentColor = theme.Text.secondary) {
+            Tab(
+                selected = activeTab == 2, onClick = { activeTab = 2 },
+                selectedContentColor = theme.Text.primary,
+                unselectedContentColor = theme.Text.secondary
+            ) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text("Branches (${state.branchData.size})", fontSize = fs.label)
+                    TabLabel("Branches", state.branchData.size, fs)
                 }
             }
         }
+
         Divider(color = theme.divider, thickness = 0.5.dp)
         when (activeTab) {
             0 -> IssuesPanel(state)
@@ -94,33 +109,60 @@ fun MainListScreen(state: ToolWindowState) {
 }
 
 @Composable
+private fun TabLabel(name: String, count: Int, fs: PlatformFonts) {
+    Text("$name ($count)", fontSize = fs.label)
+}
+
+@Composable
 fun HeaderBar(state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
+
     Row(
-        modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.Bg.surface)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            if (state.remoteDetected) "${state.remoteOwner}/${state.remoteRepo}" else "No remote",
-            color = theme.Text.primary, fontWeight = FontWeight.Bold, fontSize = fs.label
+            text = if (state.remoteDetected) "${state.remoteOwner}/${state.remoteRepo}" else "No remote",
+            color = theme.Text.primary,
+            fontWeight = FontWeight.Bold,
+            fontSize = fs.label
         )
         if (state.currentBranch != null) {
-            Text("  ·  ${state.currentBranch}", color = theme.Text.secondary, fontSize = fs.small,
-                modifier = Modifier.padding(start = 4.dp))
+            Text(
+                text = "  ·  ${state.currentBranch}",
+                color = theme.Text.secondary,
+                fontSize = fs.small,
+                modifier = Modifier.padding(start = 4.dp)
+            )
         }
+
         Spacer(Modifier.weight(1f))
+
         TextButton(
             onClick = { state.createIssue() },
             colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent),
-            modifier = Modifier.background(theme.Accent.green, RoundedCornerShape(4.dp)).height(32.dp)
-        ) { Text("+ Issue", fontSize = fs.small) }
+            modifier = Modifier
+                .background(theme.Accent.green, RoundedCornerShape(4.dp))
+                .height(32.dp)
+        ) {
+            Text("+ Issue", fontSize = fs.small)
+        }
+
         Spacer(Modifier.width(6.dp))
+
         TextButton(
             onClick = { state.createPR() },
             colors = ButtonDefaults.textButtonColors(contentColor = theme.Text.onAccent),
-            modifier = Modifier.background(theme.Accent.blue, RoundedCornerShape(4.dp)).height(32.dp)
-        ) { Text("+ PR", fontSize = fs.small) }
+            modifier = Modifier
+                .background(theme.Accent.blue, RoundedCornerShape(4.dp))
+                .height(32.dp)
+        ) {
+            Text("+ PR", fontSize = fs.small)
+        }
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
 }
@@ -131,23 +173,45 @@ fun StatusBar(state: ToolWindowState) {
     val fs = rememberPlatformFonts()
     val awt = state.statusColor
     val color = Color(awt.red / 255f, awt.green / 255f, awt.blue / 255f, awt.alpha / 255f)
+
     Row(
-        modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(horizontal = 8.dp, vertical = 2.dp)
-    ) { Text(state.statusText, color = color, fontSize = fs.xsmall) }
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.Bg.surface)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(state.statusText, color = color, fontSize = fs.xsmall)
+    }
 }
 
 @Composable
 fun IssuesPanel(state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
-    FilterChipRow(mapOf("all" to "All", "open" to "Open", "closed" to "Closed"), state.issueFilterState) { state.issueFilterState = it }
+
+    FilterChipRow(
+        mapOf("all" to "All", "open" to "Open", "closed" to "Closed"),
+        state.issueFilterState
+    ) { state.issueFilterState = it }
+
     val filtered = remember(state.issueData, state.issueFilterState) {
-        state.issueData.filter { when (state.issueFilterState) { "open" -> it.state == IssueState.OPEN; "closed" -> it.state == IssueState.CLOSED; else -> true } }
+        state.issueData.filter { item ->
+            when (state.issueFilterState) {
+                "open" -> item.state == IssueState.OPEN
+                "closed" -> item.state == IssueState.CLOSED
+                else -> true
+            }
+        }
     }
+
     if (filtered.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No issues found", color = theme.Text.disabled, fontSize = fs.label) }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No issues found", color = theme.Text.disabled, fontSize = fs.label)
+        }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) { items(filtered) { IssueRow(it, state) } }
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(filtered) { issue -> IssueRow(issue, state) }
+        }
     }
 }
 
@@ -155,6 +219,7 @@ fun IssuesPanel(state: ToolWindowState) {
 fun IssueRow(issue: Issue, state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,36 +231,15 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
                 .padding(start = 12.dp, end = 12.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "#${issue.number}",
-                color = theme.Text.link,
-                fontWeight = FontWeight.Bold,
-                fontSize = fs.small,
-                modifier = Modifier.clickable { BrowserUtil.browse(issue.url) }
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = issue.title,
-                color = theme.Text.primary,
-                fontSize = fs.label,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StateBadge(issueState = issue.state)
-
-            Text(
-                text = "by ${issue.author} · ${ToolWindowState.fmt(issue.updatedAt)}",
-                color = theme.Text.secondary,
-                fontSize = fs.xsmall
+            RowMetaRow(
+                number = issue.number,
+                title = issue.title,
+                badge = { StateBadge(issueState = issue.state) },
+                meta = "by ${issue.author} · ${ToolWindowState.fmt(issue.updatedAt)}",
+                url = issue.url,
+                theme = theme,
+                fs = fs,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -207,14 +251,31 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
 fun PRsPanel(state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
-    FilterChipRow(mapOf("open" to "Open", "merged" to "Merged", "closed" to "Closed", "all" to "All"), state.prFilterState) { state.prFilterState = it }
+
+    FilterChipRow(
+        mapOf("open" to "Open", "merged" to "Merged", "closed" to "Closed", "all" to "All"),
+        state.prFilterState
+    ) { state.prFilterState = it }
+
     val filtered = remember(state.prData, state.prFilterState) {
-        state.prData.filter { when (state.prFilterState) { "open" -> it.state == PRState.OPEN; "merged" -> it.state == PRState.MERGED; "closed" -> it.state == PRState.CLOSED; else -> true } }
+        state.prData.filter { item ->
+            when (state.prFilterState) {
+                "open" -> item.state == PRState.OPEN
+                "merged" -> item.state == PRState.MERGED
+                "closed" -> item.state == PRState.CLOSED
+                else -> true
+            }
+        }
     }
+
     if (filtered.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No pull requests found", color = theme.Text.disabled, fontSize = fs.label) }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No pull requests found", color = theme.Text.disabled, fontSize = fs.label)
+        }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) { items(filtered) { PullRequestRow(it, state) } }
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(filtered) { pr -> PullRequestRow(pr, state) }
+        }
     }
 }
 
@@ -234,37 +295,15 @@ fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
                 .padding(start = 12.dp, end = 12.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "#${pr.number}",
-                color = theme.Text.link,
-                fontWeight = FontWeight.Bold,
-                fontSize = fs.small,
-                modifier = Modifier.clickable { BrowserUtil.browse(pr.url) }
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = pr.title,
-                color = theme.Text.primary,
-                fontSize = fs.label,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StateBadge(prState = pr.state)
-
-            Spacer(Modifier.width(8.dp))
-
-            Text(
-                text = "${pr.sourceBranch} → ${pr.targetBranch} · ${ToolWindowState.fmt(pr.updatedAt)}",
-                color = theme.Text.secondary,
-                fontSize = fs.xsmall
+            RowMetaRow(
+                number = pr.number,
+                title = pr.title,
+                badge = { StateBadge(prState = pr.state) },
+                meta = "${pr.sourceBranch} → ${pr.targetBranch} · ${ToolWindowState.fmt(pr.updatedAt)}",
+                url = pr.url,
+                theme = theme,
+                fs = fs,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -273,13 +312,58 @@ fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
 }
 
 @Composable
+private fun RowMetaRow(
+    number: Int,
+    title: String,
+    badge: @Composable () -> Unit,
+    meta: String,
+    url: String,
+    theme: ThemeColors,
+    fs: PlatformFonts,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "#$number",
+                color = theme.Text.link,
+                fontWeight = FontWeight.Bold,
+                fontSize = fs.small,
+                modifier = Modifier.clickable { BrowserUtil.browse(url) }
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = title,
+                color = theme.Text.primary,
+                fontSize = fs.label,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 6.dp)
+        ) {
+            badge()
+            Text(text = meta, color = theme.Text.secondary, fontSize = fs.xsmall)
+        }
+    }
+}
+
+@Composable
 fun BranchesPanel(state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
+
     if (state.branchData.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No branches found", color = theme.Text.disabled, fontSize = fs.label) }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No branches found", color = theme.Text.disabled, fontSize = fs.label)
+        }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) { items(state.branchData) { BranchRow(it, state) } }
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(state.branchData) { branch -> BranchRow(branch, state) }
+        }
     }
 }
 
@@ -287,34 +371,72 @@ fun BranchesPanel(state: ToolWindowState) {
 fun BranchRow(branch: GitBranch, state: ToolWindowState) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
-    val owner = state.remoteOwner; val repo = state.remoteRepo
-    Row(modifier = Modifier.fillMaxWidth().clickable { state.checkout(branch.name) }.padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Text(branch.name, color = theme.Text.link, fontSize = fs.mono,
-            modifier = Modifier.weight(1f).clickable { state.checkout(branch.name) })
-        Text(branch.sha.take(7), color = theme.Text.secondary, fontSize = fs.xsmall, fontFamily = FontFamily.Monospace,
-            modifier = Modifier.clickable { owner?.let { o -> repo?.let { r -> BrowserUtil.browse("https://github.com/$o/$r/tree/${branch.name}") } } })
+    val owner = state.remoteOwner
+    val repo = state.remoteRepo
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { state.checkout(branch.name) }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = branch.name,
+            color = theme.Text.link,
+            fontSize = fs.mono,
+            modifier = Modifier
+                .weight(1f)
+                .clickable { state.checkout(branch.name) }
+        )
+        Text(
+            text = branch.sha.take(7),
+            color = theme.Text.secondary,
+            fontSize = fs.xsmall,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.clickable {
+                if (owner != null && repo != null) {
+                    BrowserUtil.browse("https://github.com/$owner/$repo/tree/${branch.name}")
+                }
+            }
+        )
     }
+
     Divider(color = theme.dividerSubtle, thickness = 0.5.dp)
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun FilterChipRow(options: Map<String, String>, selected: String, onSelect: (String) -> Unit) {
+fun FilterChipRow(
+    options: Map<String, String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
     val theme = rememberThemeColors()
     val fs = rememberPlatformFonts()
-    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         options.forEach { (value, label) ->
-            val isSel = value == selected
+            val isSelected = value == selected
             Surface(
                 onClick = { onSelect(value) },
                 shape = RoundedCornerShape(12.dp),
-                color = if (isSel) theme.Bg.selected else theme.Bg.surface,
-                border = BorderStroke(1.dp, if (isSel) theme.Accent.blue.copy(alpha = 0.5f) else theme.Border.default.copy(alpha = 0.4f))
+                color = if (isSelected) theme.Bg.selected else theme.Bg.surface,
+                border = BorderStroke(
+                    1.dp,
+                    if (isSelected) theme.Accent.blue.copy(alpha = 0.5f) else theme.Border.default.copy(alpha = 0.4f)
+                )
             ) {
-                Text(" $label ", fontSize = fs.small,
-                    color = if (isSel) theme.Text.primary else theme.Text.secondary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                Text(
+                    text = " $label ",
+                    fontSize = fs.small,
+                    color = if (isSelected) theme.Text.primary else theme.Text.secondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
     }
@@ -322,12 +444,26 @@ fun FilterChipRow(options: Map<String, String>, selected: String, onSelect: (Str
 
 @Composable
 fun DetailScreen(state: ToolWindowState) {
-    val issue = state.selectedIssue; val pr = state.selectedPR
+    val issue = state.selectedIssue
+    val pr = state.selectedPR
+
     when {
-        issue != null -> IssueDetailContent(provider = state.provider, owner = state.remoteOwner ?: "", repo = state.remoteRepo ?: "",
-            issue = issue, onBack = { state.backToList() }, onRefresh = { state.refresh(silent = true) })
-        pr != null -> PullRequestDetailContent(provider = state.provider, owner = state.remoteOwner ?: "", repo = state.remoteRepo ?: "",
-            pr = pr, onBack = { state.backToList() }, onRefresh = { state.refresh(silent = true) })
+        issue != null -> IssueDetailContent(
+            provider = state.provider,
+            owner = state.remoteOwner ?: "",
+            repo = state.remoteRepo ?: "",
+            issue = issue,
+            onBack = { state.backToList() },
+            onRefresh = { state.refresh(silent = true) }
+        )
+        pr != null -> PullRequestDetailContent(
+            provider = state.provider,
+            owner = state.remoteOwner ?: "",
+            repo = state.remoteRepo ?: "",
+            pr = pr,
+            onBack = { state.backToList() },
+            onRefresh = { state.refresh(silent = true) }
+        )
         else -> state.backToList()
     }
 }
