@@ -21,6 +21,7 @@ import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
+import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
@@ -128,20 +129,14 @@ fun IssueDetailHeader(
             }
             Spacer(Modifier.weight(1f))
             val isOpen = issue.state == IssueState.OPEN
-            Button(
+            CompactButton(
+                text = if (isOpen) "Close" else "Reopen",
                 onClick = {
                     if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green,
-                    contentColor = theme.Text.onAccent
-                ),
-                elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                shape = RoundedCornerShape(2.dp),
-                modifier = Modifier.height(30.dp)
-            ) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
+                backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
+            )
         }
     }
     Divider(color = theme.divider, thickness = 0.5.dp)

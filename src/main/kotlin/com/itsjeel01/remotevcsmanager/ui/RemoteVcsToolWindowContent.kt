@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.project.Project
 import com.itsjeel01.remotevcsmanager.models.*
+import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadge
 import com.itsjeel01.remotevcsmanager.ui.detail.IssueDetailContent
 import com.itsjeel01.remotevcsmanager.ui.detail.PullRequestDetailContent
@@ -142,35 +143,19 @@ fun HeaderBar(state: ToolWindowState) {
 
         Spacer(Modifier.weight(1f))
 
-        Button(
+        CompactButton(
+            text = "+ Issue",
             onClick = { state.createIssue() },
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = theme.Accent.blue,
-                contentColor = theme.Text.onAccent
-            ),
-            elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(2.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-            modifier = Modifier.height(28.dp)
-        ) {
-            Text("+ Issue", fontSize = fs.small)
-        }
+            backgroundColor = theme.Accent.blue
+        )
 
         Spacer(Modifier.width(6.dp))
 
-        Button(
+        CompactButton(
+            text = "+ PR",
             onClick = { state.createPR() },
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = theme.Accent.blue,
-                contentColor = theme.Text.onAccent
-            ),
-            elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(2.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-            modifier = Modifier.height(28.dp)
-        ) {
-            Text("+ PR", fontSize = fs.small)
-        }
+            backgroundColor = theme.Accent.blue
+        )
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
 }

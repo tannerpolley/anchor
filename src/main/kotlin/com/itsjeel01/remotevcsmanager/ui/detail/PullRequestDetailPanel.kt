@@ -21,6 +21,7 @@ import com.itsjeel01.remotevcsmanager.models.PRState
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.BranchPill
+import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForPR
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
@@ -99,17 +100,14 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
             BranchPill(pr.targetBranch); Spacer(Modifier.weight(1f))
             if (pr.state != PRState.MERGED) {
                 val isOpen = pr.state == PRState.OPEN
-                Button(onClick = {
-                    if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
-                    else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
-                }, colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green,
-                    contentColor = theme.Text.onAccent
-                ),
-                    elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                    shape = RoundedCornerShape(2.dp),
-                    modifier = Modifier.height(30.dp)) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
+                CompactButton(
+                    text = if (isOpen) "Close" else "Reopen",
+                    onClick = {
+                        if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
+                        else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
+                    },
+                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
+                )
             }
         }
     }
