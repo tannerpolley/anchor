@@ -112,7 +112,7 @@ fun IssueDetailHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(theme.Bg.surface)
-            .padding(8.dp, 12.dp)
+            .padding(8.dp, 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {

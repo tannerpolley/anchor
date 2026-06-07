@@ -87,7 +87,8 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(theme.Bg.surface).padding(8.dp, 12.dp)) {
+            .background(theme.Bg.surface)
+            .padding(8.dp, 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) { Text("←", fontSize = fs.title, color = theme.Text.primary) }
             Text("#${pr.number} ${pr.title}", fontWeight = FontWeight.Bold, fontSize = fs.title, color = theme.Text.primary,
