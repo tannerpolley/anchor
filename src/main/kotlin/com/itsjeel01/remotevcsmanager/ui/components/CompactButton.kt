@@ -30,8 +30,8 @@ fun CompactButton(
         ButtonVariant.Danger -> Triple(theme.Button.dangerBackground, theme.Button.dangerForeground, null)
         ButtonVariant.Secondary -> Triple(
             androidx.compose.ui.graphics.Color.Transparent,
-            theme.Text.primary,
-            BorderStroke(1.dp, theme.Border.default.copy(alpha = 0.5f))
+            theme.Text.secondary,
+            BorderStroke(1.dp, theme.Border.default.copy(alpha = 0.7f))
         )
     }
 

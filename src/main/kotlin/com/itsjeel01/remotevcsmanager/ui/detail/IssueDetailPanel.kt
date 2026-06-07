@@ -115,7 +115,7 @@ fun IssueDetailHeader(
                 Text("←", fontSize = fs.title, color = theme.Text.primary)
             }
             Text("#${issue.number} ${issue.title}", fontWeight = FontWeight.Bold, fontSize = fs.title,
-                color = theme.Text.primary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                color = theme.Text.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
             TextButton(onClick = { BrowserUtil.browse(issue.url) }) {
                 Text("↗", fontSize = fs.small, color = theme.Text.link)

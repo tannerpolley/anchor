@@ -155,7 +155,7 @@ fun HeaderBar(state: ToolWindowState) {
         CompactButton(
             text = "Pull Request",
             onClick = { state.createPR() },
-            variant = ButtonVariant.Primary
+            variant = ButtonVariant.Secondary
         )
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
