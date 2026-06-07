@@ -432,7 +432,7 @@ fun FilterChipRow(
             val isSelected = value == selected
             Surface(
                 onClick = { onSelect(value) },
-                shape = RoundedCornerShape(2.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = if (isSelected) theme.Bg.selected else theme.Bg.surface,
                 border = BorderStroke(
                     1.dp,

@@ -138,9 +138,9 @@ fun IssueDetailHeader(
                     contentColor = theme.Text.onAccent
                 ),
                 elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
                 shape = RoundedCornerShape(2.dp),
-                modifier = Modifier.height(28.dp)
+                modifier = Modifier.height(30.dp)
             ) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
         }
     }
