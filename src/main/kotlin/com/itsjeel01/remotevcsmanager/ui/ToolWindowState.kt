@@ -55,6 +55,8 @@ class ToolWindowState(project: Project) {
         )
     }
 
+    var activeTab by mutableStateOf(0)
+
     fun reloadConfig() {
         remoteDetected = gitDetector.hasRemote() && provider.isConfigured()
         if (remoteDetected) {
@@ -120,9 +122,9 @@ class ToolWindowState(project: Project) {
         }
     }
 
-    fun showIssueDetail(issue: Issue) { selectedIssue = issue; activeScreen = Screen.Detail }
-    fun showPRDetail(pr: PullRequest) { selectedPR = pr; activeScreen = Screen.Detail }
-    fun backToList() { activeScreen = Screen.List }
+    fun showIssueDetail(issue: Issue) { selectedIssue = issue; selectedPR = null; activeTab = 0; activeScreen = Screen.Detail }
+    fun showPRDetail(pr: PullRequest) { selectedPR = pr; selectedIssue = null; activeTab = 1; activeScreen = Screen.Detail }
+    fun backToList() { selectedIssue = null; selectedPR = null; activeScreen = Screen.List }
 
     companion object {
         fun fmt(iso: String): String = try {

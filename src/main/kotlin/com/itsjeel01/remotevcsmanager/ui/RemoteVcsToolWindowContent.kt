@@ -144,7 +144,7 @@ fun HeaderBar(state: ToolWindowState) {
         Spacer(Modifier.weight(1f))
 
         CompactButton(
-            text = "+ Issue",
+            text = "New Issue",
             onClick = { state.createIssue() },
             backgroundColor = theme.Accent.blue
         )
@@ -152,7 +152,7 @@ fun HeaderBar(state: ToolWindowState) {
         Spacer(Modifier.width(6.dp))
 
         CompactButton(
-            text = "+ PR",
+            text = "Pull Request",
             onClick = { state.createPR() },
             backgroundColor = theme.Accent.blue
         )
