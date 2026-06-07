@@ -21,6 +21,7 @@ import com.itsjeel01.remotevcsmanager.models.PRState
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.BranchPill
+import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForPR
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
@@ -106,7 +107,7 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
                         if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
                         else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
                     },
-                    backgroundColor = if (isOpen) theme.Button.dangerBackground else theme.GitHub.open
+                    variant = if (isOpen) ButtonVariant.Danger else ButtonVariant.Secondary
                 )
             }
         }

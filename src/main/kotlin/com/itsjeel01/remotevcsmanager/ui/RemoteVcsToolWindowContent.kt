@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.project.Project
 import com.itsjeel01.remotevcsmanager.models.*
+import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadge
 import com.itsjeel01.remotevcsmanager.ui.detail.IssueDetailContent
@@ -146,7 +147,7 @@ fun HeaderBar(state: ToolWindowState) {
         CompactButton(
             text = "New Issue",
             onClick = { state.createIssue() },
-            backgroundColor = theme.Button.background
+            variant = ButtonVariant.Primary
         )
 
         Spacer(Modifier.width(6.dp))
@@ -154,7 +155,7 @@ fun HeaderBar(state: ToolWindowState) {
         CompactButton(
             text = "Pull Request",
             onClick = { state.createPR() },
-            backgroundColor = theme.Button.background
+            variant = ButtonVariant.Primary
         )
     }
     Divider(color = theme.divider, thickness = 0.5.dp)

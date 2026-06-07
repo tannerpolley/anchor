@@ -21,6 +21,7 @@ import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
+import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
@@ -135,7 +136,7 @@ fun IssueDetailHeader(
                     if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
-                backgroundColor = if (isOpen) theme.Button.dangerBackground else theme.GitHub.open
+                variant = if (isOpen) ButtonVariant.Danger else ButtonVariant.Secondary
             )
         }
     }
