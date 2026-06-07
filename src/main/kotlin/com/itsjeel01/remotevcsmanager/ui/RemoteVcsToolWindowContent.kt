@@ -145,12 +145,13 @@ fun HeaderBar(state: ToolWindowState) {
         Button(
             onClick = { state.createIssue() },
             colors = ButtonDefaults.buttonColors(
-                backgroundColor = theme.Accent.green,
+                backgroundColor = theme.Accent.blue,
                 contentColor = theme.Text.onAccent
             ),
             elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(4.dp),
-            modifier = Modifier.height(32.dp)
+            shape = RoundedCornerShape(2.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+            modifier = Modifier.height(28.dp)
         ) {
             Text("+ Issue", fontSize = fs.small)
         }
@@ -164,8 +165,9 @@ fun HeaderBar(state: ToolWindowState) {
                 contentColor = theme.Text.onAccent
             ),
             elevation = ButtonDefaults.elevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(4.dp),
-            modifier = Modifier.height(32.dp)
+            shape = RoundedCornerShape(2.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+            modifier = Modifier.height(28.dp)
         ) {
             Text("+ PR", fontSize = fs.small)
         }
@@ -430,7 +432,7 @@ fun FilterChipRow(
             val isSelected = value == selected
             Surface(
                 onClick = { onSelect(value) },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(2.dp),
                 color = if (isSelected) theme.Bg.selected else theme.Bg.surface,
                 border = BorderStroke(
                     1.dp,
