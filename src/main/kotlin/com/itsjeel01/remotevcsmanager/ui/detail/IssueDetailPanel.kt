@@ -50,7 +50,10 @@ fun IssueDetailContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.Bg.primary)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(theme.Bg.primary)) {
         IssueDetailHeader(issue, onBack, onRefresh, provider, owner, repo)
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
             item {
@@ -101,7 +104,10 @@ fun IssueDetailHeader(
 ) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
-    Column(modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(8.dp, 12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.Bg.surface).padding(8.dp, 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) {
                 Text("←", fontSize = fs.title, color = theme.Text.primary)
@@ -166,10 +172,15 @@ fun CommentInputBar(
     text: String, onTextChange: (String) -> Unit, onSubmit: () -> Unit) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
-    Column(modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(8.dp, 4.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.Bg.surface).padding(8.dp, 4.dp)) {
         OutlinedTextField(
             value = text, onValueChange = onTextChange,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp, max = 100.dp),
+            modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 34.dp, max = 100.dp),
             placeholder = { Text("Leave a comment...", fontSize = fs.label, color = theme.Text.disabled) },
             textStyle = LocalTextStyle.current.copy(fontSize = fs.label, color = theme.Text.primary),
             singleLine = false, maxLines = 3,
@@ -179,7 +190,9 @@ fun CommentInputBar(
                 backgroundColor = theme.Bg.input
             )
         )
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+        Row(Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onSubmit, enabled = text.isNotBlank()) {
                 Text("Post Comment", fontSize = fs.small,
                     color = if (text.isNotBlank()) theme.Accent.blue else theme.Text.disabled)

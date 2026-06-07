@@ -48,7 +48,10 @@ fun PullRequestDetailContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.Bg.primary)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(theme.Bg.primary)) {
         PRDetailHeader(pr, onBack, onRefresh, provider, owner, repo)
         TabRow(selectedTabIndex = activeSubTab, backgroundColor = theme.Bg.primary) {
             Tab(selected = activeSubTab == 0, onClick = { activeSubTab = 0 }, selectedContentColor = theme.Text.primary,
@@ -77,7 +80,10 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
                    provider: GitHubProvider, owner: String, repo: String) {
                        val theme = LocalThemeColors.current
                        val fs = LocalPlatformFonts.current
-    Column(modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(8.dp, 12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.Bg.surface).padding(8.dp, 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) { Text("←", fontSize = fs.title, color = theme.Text.primary) }
             Text("#${pr.number} ${pr.title}", fontWeight = FontWeight.Bold, fontSize = fs.title, color = theme.Text.primary,
@@ -139,17 +145,26 @@ fun CommitsTab(commits: List<CommitSummary>, loading: Boolean) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
     if (loading) {
-        Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier
+            .fillMaxSize()
+            .padding(16.dp), contentAlignment = Alignment.Center) {
             Text("Loading commits...", color = theme.Text.disabled, fontSize = fs.label)
         }
     } else if (commits.isEmpty()) {
-        Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier
+            .fillMaxSize()
+            .padding(16.dp), contentAlignment = Alignment.Center) {
             Text("No commits found", color = theme.Text.disabled, fontSize = fs.label)
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+        LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp)) {
             items(commits) { commit ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(commit.sha.take(7), fontFamily = FontFamily.Monospace, fontSize = fs.mono, color = theme.Text.link,
                         modifier = Modifier.clickable { if (commit.url.isNotBlank()) BrowserUtil.browse(commit.url) })
                     Spacer(Modifier.width(8.dp))
