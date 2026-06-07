@@ -111,7 +111,7 @@ fun MainListScreen(state: ToolWindowState) {
 
 @Composable
 private fun TabLabel(name: String, count: Int, fs: PlatformFonts) {
-    Text("$name ($count)", fontSize = fs.label)
+    Text("$name ($count)", fontSize = fs.mono)
 }
 
 @Composable
@@ -130,7 +130,7 @@ fun HeaderBar(state: ToolWindowState) {
             text = if (state.remoteDetected) "${state.remoteOwner}/${state.remoteRepo}" else "No remote",
             color = theme.Text.primary,
             fontWeight = FontWeight.Bold,
-            fontSize = fs.label
+            fontSize = fs.mono
         )
         if (state.currentBranch != null) {
             Text(
@@ -146,7 +146,7 @@ fun HeaderBar(state: ToolWindowState) {
         CompactButton(
             text = "New Issue",
             onClick = { state.createIssue() },
-            backgroundColor = theme.Accent.blue
+            backgroundColor = theme.Button.background
         )
 
         Spacer(Modifier.width(6.dp))
@@ -154,7 +154,7 @@ fun HeaderBar(state: ToolWindowState) {
         CompactButton(
             text = "Pull Request",
             onClick = { state.createPR() },
-            backgroundColor = theme.Accent.blue
+            backgroundColor = theme.Button.background
         )
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
@@ -199,7 +199,7 @@ fun IssuesPanel(state: ToolWindowState) {
 
     if (filtered.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No issues found", color = theme.Text.disabled, fontSize = fs.label)
+            Text("No issues found", color = theme.Text.disabled, fontSize = fs.mono)
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -263,7 +263,7 @@ fun PRsPanel(state: ToolWindowState) {
 
     if (filtered.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No pull requests found", color = theme.Text.disabled, fontSize = fs.label)
+            Text("No pull requests found", color = theme.Text.disabled, fontSize = fs.mono)
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -328,7 +328,7 @@ private fun RowMetaRow(
             Text(
                 text = title,
                 color = theme.Text.primary,
-                fontSize = fs.label,
+                fontSize = fs.mono,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -351,7 +351,7 @@ fun BranchesPanel(state: ToolWindowState) {
 
     if (state.branchData.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No branches found", color = theme.Text.disabled, fontSize = fs.label)
+            Text("No branches found", color = theme.Text.disabled, fontSize = fs.mono)
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -421,7 +421,7 @@ fun FilterChipRow(
                 color = if (isSelected) theme.Bg.selected else theme.Bg.surface,
                 border = BorderStroke(
                     1.dp,
-                    if (isSelected) theme.Accent.blue.copy(alpha = 0.5f) else theme.Border.default.copy(alpha = 0.4f)
+                    if (isSelected) theme.Button.background.copy(alpha = 0.5f) else theme.Border.default.copy(alpha = 0.4f)
                 )
             ) {
                 Text(

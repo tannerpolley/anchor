@@ -13,8 +13,8 @@ private fun AwtColor.toComposeColor(): Color =
     Color(red / 255f, green / 255f, blue / 255f, alpha / 255f)
 
 class BgColors {
-    val primary: Color  = UIUtil.getPanelBackground().toComposeColor()
-    val surface: Color  = UIUtil.getTableBackground().toComposeColor()
+    val primary: Color = JBColor.namedColor("Panel.background", UIUtil.getPanelBackground()).toComposeColor()
+    val surface: Color = JBColor.namedColor("Table.background", UIUtil.getTableBackground()).toComposeColor()
     val card: Color = run {
         val base = UIUtil.getTableBackground()
         val r = base.red; val g = base.green; val b = base.blue
@@ -22,42 +22,49 @@ class BgColors {
             Color((r - 8).coerceIn(0, 255) / 255f, (g - 8).coerceIn(0, 255) / 255f, (b - 8).coerceIn(0, 255) / 255f)
         else Color((r + 8).coerceIn(0, 255) / 255f, (g + 8).coerceIn(0, 255) / 255f, (b + 8).coerceIn(0, 255) / 255f)
     }
-    val input: Color    = UIUtil.getTextFieldBackground().toComposeColor()
-    val hover: Color    = UIUtil.getTableSelectionBackground(false).toComposeColor()
-    val selected: Color = UIUtil.getTableSelectionBackground(true).toComposeColor()
+    val input: Color = JBColor.namedColor("TextField.background", UIUtil.getTextFieldBackground()).toComposeColor()
+    val hover: Color = JBColor.namedColor("Table.hover.background", UIUtil.getTableSelectionBackground(false)).toComposeColor()
+    val selected: Color = JBColor.namedColor("Table.selection.background", UIUtil.getTableSelectionBackground(true)).toComposeColor()
 }
 
 class TextColors {
-    val primary: Color   = UIUtil.getLabelForeground().toComposeColor()
-    val secondary: Color = UIUtil.getContextHelpForeground().toComposeColor()
-    val disabled: Color  = UIUtil.getLabelDisabledForeground().toComposeColor()
-    val link: Color      = JBUI.CurrentTheme.Link.Foreground.ENABLED.toComposeColor()
-    val selected: Color  = UIUtil.getTableSelectionForeground(true).toComposeColor()
-    val error: Color     = UIUtil.getErrorForeground().toComposeColor()
-    val onAccent: Color  = Color.White
+    val primary: Color = JBColor.namedColor("Label.foreground", UIUtil.getLabelForeground()).toComposeColor()
+    val secondary: Color = JBColor.namedColor("Label.infoForeground", UIUtil.getContextHelpForeground()).toComposeColor()
+    val disabled: Color = JBColor.namedColor("Label.disabledForeground", UIUtil.getLabelDisabledForeground()).toComposeColor()
+    val link: Color = JBColor.namedColor("Link.foreground", JBUI.CurrentTheme.Link.Foreground.ENABLED).toComposeColor()
+    val linkHover: Color = JBColor.namedColor("Link.hover.foreground", JBUI.CurrentTheme.Link.Foreground.HOVERED).toComposeColor()
+    val selected: Color = JBColor.namedColor("Table.selection.foreground", UIUtil.getTableSelectionForeground(true)).toComposeColor()
+    val error: Color = JBColor.namedColor("Notification.error.foreground", UIUtil.getErrorForeground()).toComposeColor()
+    val onAccent: Color = Color.White
 }
 
 class BorderColors {
-    val default: Color   = UIUtil.getBoundsColor().toComposeColor()
-    val focused: Color   = JBColor.namedColor("Button.focusedBorderColor", UIUtil.getBoundsColor()).toComposeColor()
-    val linkHover: Color = JBUI.CurrentTheme.Link.Foreground.HOVERED.toComposeColor()
+    val default: Color = JBColor.namedColor("Panel.border", UIUtil.getBoundsColor()).toComposeColor()
+    val focused: Color = JBColor.namedColor("Button.focusedBorderColor", UIUtil.getBoundsColor()).toComposeColor()
 }
 
-class AccentColors {
-    val blue: Color      = JBColor.namedColor("Button.focusedBorderColor", JBColor(0x448AFF, 0x448AFF)).toComposeColor()
-    val green: Color     = JBColor(0x2DA44E, 0x3FB950).toComposeColor()
-    val purple: Color    = JBColor(0x8957E5, 0x8957E5).toComposeColor()
-    val red: Color       = JBColor(0xCF222E, 0xF85149).toComposeColor()
-    val warning: Color   = JBUI.CurrentTheme.NotificationInfo.borderColor().toComposeColor()
+class ButtonColors {
+    val background: Color = JBColor.namedColor("Button.default.startBackground", JBColor(0x448AFF, 0x448AFF)).toComposeColor()
+    val foreground: Color = JBColor.namedColor("Button.default.foreground", JBColor(0xFFFFFF, 0xFFFFFF)).toComposeColor()
+    val focusedBackground: Color = JBColor.namedColor("Button.default.focusedBackground", JBColor(0x2675BF, 0x4374E0)).toComposeColor()
+    val dangerBackground: Color = JBColor.namedColor("Button.danger.startBackground", JBColor(0xCF222E, 0xF85149)).toComposeColor()
+    val dangerForeground: Color = JBColor.namedColor("Button.danger.foreground", JBColor(0xFFFFFF, 0xFFFFFF)).toComposeColor()
+}
+
+class GitHubColors {
+    val open: Color = JBColor(0x2DA44E, 0x3FB950).toComposeColor()
+    val closed: Color = JBColor(0x8957E5, 0x8957E5).toComposeColor()
+    val closedPr: Color = JBColor(0xCF222E, 0xF85149).toComposeColor()
 }
 
 class ThemeColors(version: Int = 0) {
-    val Bg: BgColors          = BgColors()
-    val Text: TextColors      = TextColors()
-    val Border: BorderColors  = BorderColors()
-    val Accent: AccentColors  = AccentColors()
-    val divider: Color        = UIUtil.getBoundsColor().toComposeColor().copy(alpha = 0.5f)
-    val dividerSubtle: Color  = UIUtil.getBoundsColor().toComposeColor().copy(alpha = 0.25f)
+    val Bg: BgColors = BgColors()
+    val Text: TextColors = TextColors()
+    val Border: BorderColors = BorderColors()
+    val Button: ButtonColors = ButtonColors()
+    val GitHub: GitHubColors = GitHubColors()
+    val divider: Color = Border.default.copy(alpha = 0.5f)
+    val dividerSubtle: Color = Border.default.copy(alpha = 0.25f)
 }
 
 @Composable
@@ -67,10 +74,12 @@ fun rememberThemeColors(): ThemeColors {
 }
 
 class PlatformFonts(version: Int = 0) {
-    val label: TextUnit  = JBUI.Fonts.label().size.toFloat().sp
-    val small: TextUnit  = JBUI.Fonts.smallFont().size.toFloat().sp
-    val mono: TextUnit   = JBUI.Fonts.label().size.toFloat().sp
-    val title: TextUnit  = (JBUI.Fonts.label().size.toFloat() * 1.15f).sp
+    val label: TextUnit = JBUI.Fonts.label().size.toFloat().sp
+    val small: TextUnit = JBUI.Fonts.smallFont().size.toFloat().sp
+    val mini: TextUnit = JBUI.Fonts.miniFont().size.toFloat().sp
+    val bold: TextUnit = JBUI.Fonts.label().size.toFloat().sp
+    val mono: TextUnit = JBUI.Fonts.label().size.toFloat().sp
+    val title: TextUnit = (JBUI.Fonts.label().size.toFloat() * 1.15f).sp
     val xsmall: TextUnit = (JBUI.Fonts.smallFont().size.toFloat() * 0.9f).sp
 }
 

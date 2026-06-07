@@ -57,11 +57,11 @@ fun PullRequestDetailContent(
         TabRow(selectedTabIndex = activeSubTab, backgroundColor = theme.Bg.primary) {
             Tab(selected = activeSubTab == 0, onClick = { activeSubTab = 0 }, selectedContentColor = theme.Text.primary,
                 unselectedContentColor = theme.Text.secondary) {
-                Text("Conversation", fontSize = fs.label, modifier = Modifier.padding(12.dp, 8.dp))
+                Text("Conversation", fontSize = fs.mono, modifier = Modifier.padding(12.dp, 8.dp))
             }
             Tab(selected = activeSubTab == 1, onClick = { activeSubTab = 1 }, selectedContentColor = theme.Text.primary,
                 unselectedContentColor = theme.Text.secondary) {
-                Text("Commits", fontSize = fs.label, modifier = Modifier.padding(12.dp, 8.dp))
+                Text("Commits", fontSize = fs.mono, modifier = Modifier.padding(12.dp, 8.dp))
             }
         }
         Divider(color = theme.divider, thickness = 0.5.dp)
@@ -106,7 +106,7 @@ fun PRDetailHeader(pr: PullRequest, onBack: () -> Unit, onRefresh: () -> Unit,
                         if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
                         else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
                     },
-                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
+                    backgroundColor = if (isOpen) theme.Button.dangerBackground else theme.GitHub.open
                 )
             }
         }
@@ -134,7 +134,7 @@ fun ConversationTab(pr: PullRequest, comments: List<IssueComment>,
                 Spacer(Modifier.height(8.dp))
             }
             if (comments.isNotEmpty()) {
-                item { Text("Comments (${comments.size})", fontWeight = FontWeight.Bold, fontSize = fs.label, color = theme.Text.secondary) }
+                item { Text("Comments (${comments.size})", fontWeight = FontWeight.Bold, fontSize = fs.mono, color = theme.Text.secondary) }
                 items(comments) { CommentCard(it); Spacer(Modifier.height(6.dp)) }
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -151,13 +151,13 @@ fun CommitsTab(commits: List<CommitSummary>, loading: Boolean) {
         Box(Modifier
             .fillMaxSize()
             .padding(16.dp), contentAlignment = Alignment.Center) {
-            Text("Loading commits...", color = theme.Text.disabled, fontSize = fs.label)
+            Text("Loading commits...", color = theme.Text.disabled, fontSize = fs.mono)
         }
     } else if (commits.isEmpty()) {
         Box(Modifier
             .fillMaxSize()
             .padding(16.dp), contentAlignment = Alignment.Center) {
-            Text("No commits found", color = theme.Text.disabled, fontSize = fs.label)
+            Text("No commits found", color = theme.Text.disabled, fontSize = fs.mono)
         }
     } else {
         LazyColumn(

@@ -135,7 +135,7 @@ fun IssueDetailHeader(
                     if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
-                backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
+                backgroundColor = if (isOpen) theme.Button.dangerBackground else theme.GitHub.open
             )
         }
     }
@@ -193,7 +193,7 @@ fun CommentInputBar(
             .padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onSubmit, enabled = text.isNotBlank()) {
                 Text("Post Comment", fontSize = fs.small,
-                    color = if (text.isNotBlank()) theme.Accent.blue else theme.Text.disabled)
+                    color = if (text.isNotBlank()) theme.Text.link else theme.Text.disabled)
             }
         }
     }

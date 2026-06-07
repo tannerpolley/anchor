@@ -44,7 +44,7 @@ fun LabelChip(
         onClick = { onToggle?.invoke() },
         shape = RoundedCornerShape(4.dp),
         color = chipColor,
-        border = if (selected) BorderStroke(2.dp, theme.Accent.blue) else null,
+        border = if (selected) BorderStroke(2.dp, theme.Border.focused) else null,
         modifier = modifier
     ) {
         Text(

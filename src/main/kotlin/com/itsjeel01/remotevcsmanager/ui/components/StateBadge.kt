@@ -22,10 +22,10 @@ fun StateBadge(issueState: IssueState? = null, prState: PRState? = null, modifie
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
     val (text, color) = when {
-        issueState == IssueState.OPEN || prState == PRState.OPEN -> "● Open" to theme.Accent.green
-        issueState == IssueState.CLOSED -> "● Closed" to theme.Accent.purple
-        prState == PRState.CLOSED -> "● Closed" to theme.Accent.red
-        prState == PRState.MERGED -> "● Merged" to theme.Accent.purple
+        issueState == IssueState.OPEN || prState == PRState.OPEN -> "● Open" to theme.GitHub.open
+        issueState == IssueState.CLOSED -> "● Closed" to theme.GitHub.closed
+        prState == PRState.CLOSED -> "● Closed" to theme.GitHub.closedPr
+        prState == PRState.MERGED -> "● Merged" to theme.GitHub.closed
         else -> return
     }
     Surface(modifier = modifier, shape = RoundedCornerShape(10.dp), color = color.copy(alpha = 0.18f),

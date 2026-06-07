@@ -152,7 +152,7 @@ object MarkdownCompose {
                 Row(Modifier.padding(horizontal = 0.dp, vertical = 1.dp)) {
                     Text(if (ordered) "${idx + 1}." else "•", color = theme.Text.secondary,
                         fontSize = fs.small, modifier = Modifier.width(20.dp))
-                    inlineContent(item, size = fs.label, color = theme.Text.primary)
+                    inlineContent(item, size = fs.mono, color = theme.Text.primary)
                 }
             }
         }
@@ -171,7 +171,7 @@ object MarkdownCompose {
     private fun inlineBlock(text: String, type: BlockType) {
         val theme = LocalThemeColors.current
         val fs = LocalPlatformFonts.current
-        val size = when (type) { BlockType.H1 -> fs.title; BlockType.H2 -> fs.label; BlockType.H3 -> fs.small; BlockType.QUOTE -> fs.small; else -> fs.label }
+        val size = when (type) { BlockType.H1 -> fs.title; BlockType.H2 -> fs.mono; BlockType.H3 -> fs.small; BlockType.QUOTE -> fs.small; else -> fs.mono }
         val color = if (type == BlockType.QUOTE) theme.Text.secondary else theme.Text.primary
         val bg = if (type == BlockType.QUOTE) theme.Bg.hover else androidx.compose.ui.graphics.Color.Transparent
         Surface(Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = if (type == BlockType.H1 || type == BlockType.H2) 3.dp else 1.dp),
@@ -277,7 +277,7 @@ object MarkdownCompose {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(first.groupValues[1]) }
                 }))
                 first == code -> result.add(Fragment.Text(buildAnnotatedString {
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Accent.blue)) { append(first.groupValues[1]) }
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Text.link)) { append(first.groupValues[1]) }
                 }))
                 first == italic || first == italic2 -> result.add(Fragment.Text(buildAnnotatedString {
                     withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(first.groupValues[1]) }
@@ -310,7 +310,7 @@ object MarkdownCompose {
                     pushStringAnnotation(URL_ANNOTATION, first.groupValues[2]); append(first.groupValues[1]); pop()
                 }
                 first == bold || first == bold2 -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(first.groupValues[1]) }
-                first == code -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Accent.blue)) { append(first.groupValues[1]) }
+                first == code -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Text.link)) { append(first.groupValues[1]) }
                 first == italic || first == italic2 -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(first.groupValues[1]) }
                 first == strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(first.groupValues[1]) }
             }
