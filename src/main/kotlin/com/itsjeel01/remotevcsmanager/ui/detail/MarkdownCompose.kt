@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.intellij.ide.BrowserUtil
-import com.itsjeel01.remotevcsmanager.ui.theme.PlatformFonts
+import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
+import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 import com.itsjeel01.remotevcsmanager.ui.theme.ThemeColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,13 +38,36 @@ private sealed class Fragment {
     data class Image(val url: String, val alt: String) : Fragment()
 }
 
-// ── Image loader ──────────────────────────────────────────────────────────
+// ── Image cache (LRU memory cache + OkHttp disk cache) ────────────────────
 
+private const val MAX_CACHED_IMAGES = 100
+
+/** In-memory LRU cache for decoded ImageBitmaps — avoids re-download + re-decode */
+private val imageBitmapCache = object : LinkedHashMap<String, ImageBitmap>(MAX_CACHED_IMAGES, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>): Boolean = size > MAX_CACHED_IMAGES
+}
+
+/** OkHttp client with connection pooling, reduced timeouts, and disk cache */
 private val imageClient = OkHttpClient.Builder()
-    .followRedirects(true).followSslRedirects(true).build()
+    .followRedirects(true).followSslRedirects(true)
+    .connectionPool(okhttp3.ConnectionPool(10, 30, java.util.concurrent.TimeUnit.SECONDS))
+    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+    .writeTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+    .retryOnConnectionFailure(true)
+    .cache(okhttp3.Cache(
+        java.io.File(System.getProperty("java.io.tmpdir"), "remotevcs-vcs-cache").also { it.mkdirs() },
+        20L * 1024 * 1024
+    ))
+    .build()
 
 @Composable
 private fun rememberImageBitmap(url: String): ImageBitmap? {
+    // Check memory cache first (instant — no I/O, no decode)
+    synchronized(imageBitmapCache) {
+        imageBitmapCache[url]?.let { return it }
+    }
+
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(url) {
         bitmap = null
@@ -55,7 +79,9 @@ private fun rememberImageBitmap(url: String): ImageBitmap? {
                     resp.body?.bytes()?.let { bytes ->
                         val skiaImage = SkiaImage.makeFromEncoded(bytes)
                         if (skiaImage != null) {
-                            bitmap = skiaImage.toComposeImageBitmap()
+                            val bmp = skiaImage.toComposeImageBitmap()
+                            synchronized(imageBitmapCache) { imageBitmapCache[url] = bmp }
+                            bitmap = bmp
                         }
                     }
                 }
@@ -73,7 +99,8 @@ object MarkdownCompose {
 
     @Composable
     fun Block(markdown: String, modifier: Modifier = Modifier) {
-        val fs = PlatformFonts.current()
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         if (markdown.isBlank()) return
 
         Column(modifier = modifier) {
@@ -82,16 +109,16 @@ object MarkdownCompose {
             while (i < lines.size) {
                 val trimmed = lines[i].trim()
                 when {
-                    trimmed.startsWith("```") -> i = codeBlock(lines, i, fs)
-                    trimmed.startsWith("### ") -> inlineBlock(trimmed.removePrefix("### "), BlockType.H3, fs)
-                    trimmed.startsWith("## ") -> inlineBlock(trimmed.removePrefix("## "), BlockType.H2, fs)
-                    trimmed.startsWith("# ") -> inlineBlock(trimmed.removePrefix("# "), BlockType.H1, fs)
-                    trimmed.startsWith("> ") -> inlineBlock(trimmed.removePrefix("> "), BlockType.QUOTE, fs)
-                    trimmed.startsWith("- ") || trimmed.startsWith("* ") -> i = listBlock(lines, i, ordered = false, fs)
-                    Regex("^\\d+\\.\\s").containsMatchIn(trimmed) -> i = listBlock(lines, i, ordered = true, fs)
+                    trimmed.startsWith("```") -> i = codeBlock(lines, i)
+                    trimmed.startsWith("### ") -> inlineBlock(trimmed.removePrefix("### "), BlockType.H3)
+                    trimmed.startsWith("## ") -> inlineBlock(trimmed.removePrefix("## "), BlockType.H2)
+                    trimmed.startsWith("# ") -> inlineBlock(trimmed.removePrefix("# "), BlockType.H1)
+                    trimmed.startsWith("> ") -> inlineBlock(trimmed.removePrefix("> "), BlockType.QUOTE)
+                    trimmed.startsWith("- ") || trimmed.startsWith("* ") -> i = listBlock(lines, i, ordered = false)
+                    Regex("^\\d+\\.\\s").containsMatchIn(trimmed) -> i = listBlock(lines, i, ordered = true)
                     trimmed == "---" || trimmed == "***" -> HorizontalRule()
                     trimmed.isBlank() -> Spacer(Modifier.height(4.dp))
-                    else -> inlineBlock(trimmed, BlockType.PARAGRAPH, fs)
+                    else -> inlineBlock(trimmed, BlockType.PARAGRAPH)
                 }
                 i++
             }
@@ -101,20 +128,24 @@ object MarkdownCompose {
     // ── Block renderers ───────────────────────────────────────────────────
 
     @Composable
-    private fun codeBlock(lines: List<String>, start: Int, fs: PlatformFonts.FontScale): Int {
+    private fun codeBlock(lines: List<String>, start: Int): Int {
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         val code = mutableListOf<String>()
         var i = start + 1
         while (i < lines.size && !lines[i].trim().startsWith("```")) { code.add(lines[i]); i++ }
         Surface(Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = 3.dp),
-            shape = RoundedCornerShape(4.dp), color = ThemeColors.Bg.surface) {
+            shape = RoundedCornerShape(4.dp), color = theme.Bg.surface) {
             Text(code.joinToString("\n"), fontFamily = FontFamily.Monospace, fontSize = fs.mono,
-                color = ThemeColors.Text.primary.copy(alpha = 0.9f), modifier = Modifier.padding(8.dp))
+                color = theme.Text.primary.copy(alpha = 0.9f), modifier = Modifier.padding(8.dp))
         }
         return i
     }
 
     @Composable
-    private fun listBlock(lines: List<String>, start: Int, ordered: Boolean, fs: PlatformFonts.FontScale): Int {
+    private fun listBlock(lines: List<String>, start: Int, ordered: Boolean): Int {
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         val items = mutableListOf<String>()
         var j = start
         while (j < lines.size) {
@@ -127,9 +158,9 @@ object MarkdownCompose {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 1.dp)) {
             items.forEachIndexed { idx, item ->
                 Row(Modifier.padding(horizontal = 0.dp, vertical = 1.dp)) {
-                    Text(if (ordered) "${idx + 1}." else "•", color = ThemeColors.Text.secondary,
+                    Text(if (ordered) "${idx + 1}." else "•", color = theme.Text.secondary,
                         fontSize = fs.small, modifier = Modifier.width(20.dp))
-                    inlineContent(item, fs)
+                    inlineContent(item, size = fs.label, color = theme.Text.primary)
                 }
             }
         }
@@ -138,20 +169,24 @@ object MarkdownCompose {
 
     @Composable
     private fun HorizontalRule() {
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         Spacer(Modifier.height(4.dp))
-        Divider(color = ThemeColors.dividerSubtle, thickness = 0.5.dp)
+        Divider(color = theme.dividerSubtle, thickness = 0.5.dp)
     }
 
     // ── Inline renderer (text + images) ───────────────────────────────────
 
     @Composable
-    private fun inlineBlock(text: String, type: BlockType, fs: PlatformFonts.FontScale) {
+    private fun inlineBlock(text: String, type: BlockType) {
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         val size = when (type) { BlockType.H1 -> fs.title; BlockType.H2 -> fs.label; BlockType.H3 -> fs.small; BlockType.QUOTE -> fs.small; else -> fs.label }
-        val color = if (type == BlockType.QUOTE) ThemeColors.Text.secondary else ThemeColors.Text.primary
-        val bg = if (type == BlockType.QUOTE) ThemeColors.Bg.hover else androidx.compose.ui.graphics.Color.Transparent
+        val color = if (type == BlockType.QUOTE) theme.Text.secondary else theme.Text.primary
+        val bg = if (type == BlockType.QUOTE) theme.Bg.hover else androidx.compose.ui.graphics.Color.Transparent
         Surface(Modifier.fillMaxWidth().padding(horizontal = 0.dp, vertical = if (type == BlockType.H1 || type == BlockType.H2) 3.dp else 1.dp),
             shape = if (type == BlockType.QUOTE) RoundedCornerShape(4.dp) else RoundedCornerShape(0.dp), color = bg) {
-            inlineContent(text, fs, size = size, color = color,
+            inlineContent(text, size = size, color = color,
                 fontWeight = if (type in listOf(BlockType.H1, BlockType.H2, BlockType.H3)) FontWeight.Bold else FontWeight.Normal,
                 startPadding = if (type == BlockType.QUOTE) 8.dp else 0.dp)
         }
@@ -159,13 +194,15 @@ object MarkdownCompose {
 
     @Composable
     private fun inlineContent(
-        text: String, fs: PlatformFonts.FontScale,
-        size: TextUnit = fs.label,
-        color: androidx.compose.ui.graphics.Color = ThemeColors.Text.primary,
+        text: String,
+        size: TextUnit,
+        color: androidx.compose.ui.graphics.Color,
         fontWeight: FontWeight = FontWeight.Normal,
         startPadding: Dp = 0.dp
     ) {
-        val fragments = parseFragments(text, fs)
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
+        val fragments = parseFragments(text, theme)
         if (fragments.isEmpty()) return
 
         if (fragments.all { it is Fragment.Text }) {
@@ -201,6 +238,8 @@ object MarkdownCompose {
 
     @Composable
     private fun inlineImage(url: String, alt: String) {
+        val theme = LocalThemeColors.current
+        val fs = LocalPlatformFonts.current
         val bitmap = rememberImageBitmap(url)
         if (bitmap != null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -209,14 +248,14 @@ object MarkdownCompose {
                     contentScale = ContentScale.Fit)
             }
         } else {
-            Text("🖼 $alt", fontSize = PlatformFonts.current().xsmall, color = ThemeColors.Text.disabled,
+            Text("🖼 $alt", fontSize = fs.xsmall, color = theme.Text.disabled,
                 modifier = Modifier.padding(vertical = 4.dp))
         }
     }
 
     // ── Fragment parser ───────────────────────────────────────────────────
 
-    private fun parseFragments(text: String, fs: PlatformFonts.FontScale): List<Fragment> {
+    private fun parseFragments(text: String, theme: ThemeColors): List<Fragment> {
         val result = mutableListOf<Fragment>()
         var remaining = text
         while (remaining.isNotEmpty()) {
@@ -230,9 +269,9 @@ object MarkdownCompose {
             val italic2 = Regex("""(?<!_)_(?!_)(.+?)(?<!_)_(?!_)""").find(remaining)
             val strike = Regex("""~~(.+?)~~""").find(remaining)
             val candidates = listOfNotNull(imgHtml, image, bold, bold2, link, code, italic, italic2, strike)
-            if (candidates.isEmpty()) { result.add(Fragment.Text(parseInline(remaining, fs))); break }
+            if (candidates.isEmpty()) { result.add(Fragment.Text(parseInline(remaining, theme))); break }
             val first = candidates.minByOrNull { it.range.first }!!
-            if (first.range.first > 0) result.add(Fragment.Text(parseInline(remaining.substring(0, first.range.first), fs)))
+            if (first.range.first > 0) result.add(Fragment.Text(parseInline(remaining.substring(0, first.range.first), theme)))
             when {
                 first == imgHtml || first == image -> {
                     val url = if (first == imgHtml) first.groupValues[1] else first.groupValues[2]
@@ -242,7 +281,7 @@ object MarkdownCompose {
                     result.add(Fragment.Image(url, alt))
                 }
                 first == link -> result.add(Fragment.Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = ThemeColors.Text.link, textDecoration = TextDecoration.Underline)) {
+                    withStyle(SpanStyle(color = theme.Text.link, textDecoration = TextDecoration.Underline)) {
                         pushStringAnnotation(URL_ANNOTATION, first.groupValues[2]); append(first.groupValues[1]); pop()
                     }
                 }))
@@ -250,7 +289,7 @@ object MarkdownCompose {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(first.groupValues[1]) }
                 }))
                 first == code -> result.add(Fragment.Text(buildAnnotatedString {
-                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = ThemeColors.Bg.surface, color = ThemeColors.Accent.blue)) { append(first.groupValues[1]) }
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Accent.blue)) { append(first.groupValues[1]) }
                 }))
                 first == italic || first == italic2 -> result.add(Fragment.Text(buildAnnotatedString {
                     withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(first.groupValues[1]) }
@@ -264,7 +303,7 @@ object MarkdownCompose {
         return result
     }
 
-    private fun parseInline(text: String, fs: PlatformFonts.FontScale): AnnotatedString = buildAnnotatedString {
+    private fun parseInline(text: String, theme: ThemeColors): AnnotatedString = buildAnnotatedString {
         var remaining = text
         while (remaining.isNotEmpty()) {
             val bold = Regex("""\*\*(.+?)\*\*""").find(remaining)
@@ -279,11 +318,11 @@ object MarkdownCompose {
             val first = candidates.minByOrNull { it.range.first }!!
             append(remaining.substring(0, first.range.first))
             when {
-                first == link -> withStyle(SpanStyle(color = ThemeColors.Text.link, textDecoration = TextDecoration.Underline)) {
+                first == link -> withStyle(SpanStyle(color = theme.Text.link, textDecoration = TextDecoration.Underline)) {
                     pushStringAnnotation(URL_ANNOTATION, first.groupValues[2]); append(first.groupValues[1]); pop()
                 }
                 first == bold || first == bold2 -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(first.groupValues[1]) }
-                first == code -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = ThemeColors.Bg.surface, color = ThemeColors.Accent.blue)) { append(first.groupValues[1]) }
+                first == code -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = theme.Bg.surface, color = theme.Accent.blue)) { append(first.groupValues[1]) }
                 first == italic || first == italic2 -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(first.groupValues[1]) }
                 first == strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(first.groupValues[1]) }
             }

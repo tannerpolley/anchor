@@ -23,8 +23,8 @@ import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
-import com.itsjeel01.remotevcsmanager.ui.theme.PlatformFonts
-import com.itsjeel01.remotevcsmanager.ui.theme.ThemeColors
+import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
+import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -39,7 +39,8 @@ fun IssueDetailContent(
     provider: GitHubProvider, owner: String, repo: String, issue: Issue,
     onBack: () -> Unit, onRefresh: () -> Unit
 ) {
-    val fs = PlatformFonts.current()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
     var comments by remember { mutableStateOf<List<IssueComment>>(emptyList()) }
     var commentText by remember { mutableStateOf("") }
 
@@ -49,8 +50,8 @@ fun IssueDetailContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(ThemeColors.Bg.primary)) {
-        IssueDetailHeader(issue, onBack, onRefresh, provider, owner, repo, fs)
+    Column(modifier = Modifier.fillMaxSize().background(theme.Bg.primary)) {
+        IssueDetailHeader(issue, onBack, onRefresh, provider, owner, repo)
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
             item {
                 Spacer(Modifier.height(8.dp))
@@ -58,12 +59,12 @@ fun IssueDetailContent(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(6.dp),
                     elevation = 0.dp,
-                    backgroundColor = ThemeColors.Bg.card,
-                    border = BorderStroke(0.5.dp, ThemeColors.Border.default.copy(alpha = 0.4f))
+                    backgroundColor = theme.Bg.card,
+                    border = BorderStroke(0.5.dp, theme.Border.default.copy(alpha = 0.4f))
                 ) {
                     Column(Modifier.padding(8.dp)) {
                         Text("Description", fontWeight = FontWeight.Bold, fontSize = fs.xsmall,
-                            color = ThemeColors.Text.secondary)
+                            color = theme.Text.secondary)
                         Spacer(Modifier.height(4.dp))
                         MarkdownCompose.Block(issue.body ?: "_No description provided._")
                     }
@@ -74,9 +75,9 @@ fun IssueDetailContent(
             if (comments.isNotEmpty()) {
                 item {
                     Text("Comments (${comments.size})", fontWeight = FontWeight.Bold, fontSize = fs.label,
-                        color = ThemeColors.Text.secondary)
+                        color = theme.Text.secondary)
                 }
-                items(comments) { CommentCard(it, fs); Spacer(Modifier.height(6.dp)) }
+                items(comments) { CommentCard(it); Spacer(Modifier.height(6.dp)) }
             }
             item { Spacer(Modifier.height(8.dp)) }
         }
@@ -90,31 +91,33 @@ fun IssueDetailContent(
                     }
                 }
             }
-        }, fs)
+        })
     }
 }
 
 @Composable
 fun IssueDetailHeader(
     issue: Issue, onBack: () -> Unit, onRefresh: () -> Unit,
-    provider: GitHubProvider, owner: String, repo: String, fs: PlatformFonts.FontScale
+    provider: GitHubProvider, owner: String, repo: String
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(ThemeColors.Bg.surface).padding(8.dp, 12.dp)) {
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
+    Column(modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(8.dp, 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.padding(0.dp)) {
-                Text("←", fontSize = fs.title, color = ThemeColors.Text.primary)
+                Text("←", fontSize = fs.title, color = theme.Text.primary)
             }
             Text("#${issue.number} ${issue.title}", fontWeight = FontWeight.Bold, fontSize = fs.title,
-                color = ThemeColors.Text.primary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                color = theme.Text.primary, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
             TextButton(onClick = { BrowserUtil.browse(issue.url) }) {
-                Text("↗", fontSize = fs.small, color = ThemeColors.Text.link)
+                Text("↗", fontSize = fs.small, color = theme.Text.link)
             }
         }
         Row(modifier = Modifier.padding(start = 48.dp), verticalAlignment = Alignment.CenterVertically) {
             StateBadgeForIssue(issue.state); Spacer(Modifier.width(6.dp))
-            Text(issue.author, fontSize = fs.small, color = ThemeColors.Text.secondary); Spacer(Modifier.width(4.dp))
-            Text(fmt(issue.createdAt), fontSize = fs.small, color = ThemeColors.Text.secondary); Spacer(Modifier.width(6.dp))
+            Text(issue.author, fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(4.dp))
+            Text(fmt(issue.createdAt), fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(6.dp))
             // Labels inline in header
             issue.labels.take(6).forEach { label ->
                 val chipColor = try {
@@ -136,30 +139,32 @@ fun IssueDetailHeader(
                     else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
                 },
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = ThemeColors.Text.onAccent,
-                    backgroundColor = if (isOpen) ThemeColors.Accent.red else ThemeColors.Accent.green
+                    contentColor = theme.Text.onAccent,
+                    backgroundColor = if (isOpen) theme.Accent.red else theme.Accent.green
                 ),
                 modifier = Modifier.height(26.dp)
             ) { Text(if (isOpen) "Close" else "Reopen", fontSize = fs.small) }
         }
     }
-    Divider(color = ThemeColors.divider, thickness = 0.5.dp)
+    Divider(color = theme.divider, thickness = 0.5.dp)
 }
 
 @Composable
-fun CommentCard(comment: IssueComment, fs: PlatformFonts.FontScale) {
+fun CommentCard(comment: IssueComment) {
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(6.dp),
         elevation = 0.dp,
-        backgroundColor = ThemeColors.Bg.card,
-        border = BorderStroke(0.5.dp, ThemeColors.Border.default.copy(alpha = 0.4f))
+        backgroundColor = theme.Bg.card,
+        border = BorderStroke(0.5.dp, theme.Border.default.copy(alpha = 0.4f))
     ) {
         Column(Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.author, fontWeight = FontWeight.Bold, fontSize = fs.label, color = ThemeColors.Text.primary)
+                Text(comment.author, fontWeight = FontWeight.Bold, fontSize = fs.label, color = theme.Text.primary)
                 Spacer(Modifier.width(6.dp))
-                Text(fmt(comment.createdAt), fontSize = fs.xsmall, color = ThemeColors.Text.secondary)
+                Text(fmt(comment.createdAt), fontSize = fs.xsmall, color = theme.Text.secondary)
             }
             Spacer(Modifier.height(4.dp))
             MarkdownCompose.Block(comment.body)
@@ -169,25 +174,26 @@ fun CommentCard(comment: IssueComment, fs: PlatformFonts.FontScale) {
 
 @Composable
 fun CommentInputBar(
-    text: String, onTextChange: (String) -> Unit, onSubmit: () -> Unit, fs: PlatformFonts.FontScale
-) {
-    Column(modifier = Modifier.fillMaxWidth().background(ThemeColors.Bg.surface).padding(8.dp, 4.dp)) {
+    text: String, onTextChange: (String) -> Unit, onSubmit: () -> Unit) {
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
+    Column(modifier = Modifier.fillMaxWidth().background(theme.Bg.surface).padding(8.dp, 4.dp)) {
         OutlinedTextField(
             value = text, onValueChange = onTextChange,
             modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp, max = 100.dp),
-            placeholder = { Text("Leave a comment...", fontSize = fs.label, color = ThemeColors.Text.disabled) },
-            textStyle = LocalTextStyle.current.copy(fontSize = fs.label, color = ThemeColors.Text.primary),
+            placeholder = { Text("Leave a comment...", fontSize = fs.label, color = theme.Text.disabled) },
+            textStyle = LocalTextStyle.current.copy(fontSize = fs.label, color = theme.Text.primary),
             singleLine = false, maxLines = 3,
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedBorderColor = ThemeColors.Border.focused,
-                unfocusedBorderColor = ThemeColors.Border.default.copy(alpha = 0.4f),
-                backgroundColor = ThemeColors.Bg.input
+                focusedBorderColor = theme.Border.focused,
+                unfocusedBorderColor = theme.Border.default.copy(alpha = 0.4f),
+                backgroundColor = theme.Bg.input
             )
         )
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = onSubmit, enabled = text.isNotBlank()) {
                 Text("Post Comment", fontSize = fs.small,
-                    color = if (text.isNotBlank()) ThemeColors.Accent.blue else ThemeColors.Text.disabled)
+                    color = if (text.isNotBlank()) theme.Accent.blue else theme.Text.disabled)
             }
         }
     }
