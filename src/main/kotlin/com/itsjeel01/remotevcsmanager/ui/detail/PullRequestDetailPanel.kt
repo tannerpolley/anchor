@@ -31,7 +31,7 @@ import kotlin.concurrent.thread
 @Composable
 fun PullRequestDetailContent(
     provider: GitHubProvider, owner: String, repo: String, pr: PullRequest,
-    onBack: () -> Unit, onRefresh: () -> Unit
+    onBack: () -> Unit, onRefresh: () -> Unit, onStateToggle: (PRState) -> Unit
 ) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
@@ -78,8 +78,11 @@ fun PullRequestDetailContent(
                 CompactButton(
                     text = if (isOpen) "Close" else "Reopen",
                     onClick = {
-                        if (isOpen) bg({ provider.updateIssue(owner, repo, pr.number, state = "closed") }, onRefresh)
-                        else bg({ provider.updateIssue(owner, repo, pr.number, state = "open") }, onRefresh)
+                        val newState = if (isOpen) PRState.CLOSED else PRState.OPEN
+                        bg({ provider.updateIssue(owner, repo, pr.number, state = newState.name.lowercase()) }) {
+                            onStateToggle(newState)
+                            onBack()
+                        }
                     },
                     variant = ButtonVariant.Primary
                 )

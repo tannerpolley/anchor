@@ -43,7 +43,7 @@ import kotlin.concurrent.thread
 @Composable
 fun IssueDetailContent(
     provider: GitHubProvider, owner: String, repo: String, issue: Issue,
-    onBack: () -> Unit, onRefresh: () -> Unit
+    onBack: () -> Unit, onRefresh: () -> Unit, onStateToggle: (IssueState) -> Unit
 ) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
@@ -83,8 +83,11 @@ fun IssueDetailContent(
             CompactButton(
                 text = if (isOpen) "Close" else "Reopen",
                 onClick = {
-                    if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
-                    else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
+                    val newState = if (isOpen) IssueState.CLOSED else IssueState.OPEN
+                    bg({ provider.updateIssue(owner, repo, issue.number, state = newState.name.lowercase()) }) {
+                        onStateToggle(newState)
+                        onBack()
+                    }
                 },
                 variant = ButtonVariant.Primary
             )

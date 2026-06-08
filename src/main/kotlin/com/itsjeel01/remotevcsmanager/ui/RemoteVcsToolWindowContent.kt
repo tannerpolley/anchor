@@ -18,10 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.project.Project
 import com.itsjeel01.remotevcsmanager.models.*
 import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
+import com.itsjeel01.remotevcsmanager.ui.components.ClickableIcon
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadge
 import com.itsjeel01.remotevcsmanager.ui.detail.IssueDetailContent
@@ -182,6 +184,7 @@ fun HeaderBar(state: ToolWindowState) {
                         color = theme.Text.disabled,
                         fontSize = fs.xsmall
                     )
+                    Spacer(Modifier.width(4.dp))
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -200,13 +203,20 @@ fun HeaderBar(state: ToolWindowState) {
             }
         }
 
+        ClickableIcon(
+            icon = AllIcons.Actions.Refresh,
+            onClick = { state.refresh() },
+            description = "Refresh data"
+        )
+        Spacer(Modifier.width(8.dp))
+
         CompactButton(
             text = "New Issue",
             onClick = { state.createIssue() },
             variant = ButtonVariant.Primary
         )
 
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
 
         CompactButton(
             text = "Pull Request",
@@ -258,7 +268,7 @@ fun IssuesPanel(state: ToolWindowState) {
     val fs = rememberPlatformFonts()
 
     FilterChipRow(
-        mapOf("all" to "All", "open" to "Open", "closed" to "Closed"),
+        mapOf("open" to "Open", "closed" to "Closed", "all" to "All"),
         state.issueFilterState
     ) { state.issueFilterState = it }
 
@@ -522,7 +532,8 @@ fun DetailScreen(state: ToolWindowState) {
             repo = state.remoteRepo ?: "",
             issue = issue,
             onBack = { state.backToList() },
-            onRefresh = { state.refresh(silent = true) }
+            onRefresh = { state.refresh(silent = true) },
+            onStateToggle = { newState -> state.updateIssueState(issue.number, newState) }
         )
         pr != null -> PullRequestDetailContent(
             provider = state.provider,
@@ -530,7 +541,8 @@ fun DetailScreen(state: ToolWindowState) {
             repo = state.remoteRepo ?: "",
             pr = pr,
             onBack = { state.backToList() },
-            onRefresh = { state.refresh(silent = true) }
+            onRefresh = { state.refresh(silent = true) },
+            onStateToggle = { newState -> state.updatePRState(pr.number, newState) }
         )
         else -> state.backToList()
     }

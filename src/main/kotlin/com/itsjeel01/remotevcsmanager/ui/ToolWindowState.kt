@@ -46,7 +46,7 @@ class ToolWindowState(project: Project) {
     var lastSyncTime by mutableStateOf<String?>(null)
 
     var activeScreen: Screen by mutableStateOf(Screen.List)
-    var issueFilterState by mutableStateOf("all")
+    var issueFilterState by mutableStateOf("open")
     var prFilterState by mutableStateOf("open")
 
     var issueData by mutableStateOf<List<Issue>>(emptyList())
@@ -84,6 +84,24 @@ class ToolWindowState(project: Project) {
             statusColor = UIUtil.getContextHelpForeground()
             syncPhase = SyncPhase.IDLE
             issueData = emptyList(); prData = emptyList(); branchData = emptyList()
+            issueCount = 0; prCount = 0; branchCount = 0
+            lastSyncTime = null
+        }
+    }
+
+    fun refreshIssues() {
+        val o = remoteOwner ?: return; val r = remoteRepo ?: return
+        statusText = "Refreshing issues…"
+        thread {
+            try {
+                val open = runBlocking { provider.getIssues(o, r, "open", null, null) }
+                val closed = runBlocking { provider.getIssues(o, r, "closed", null, null) }
+                val combined = open + closed
+                javax.swing.SwingUtilities.invokeLater {
+                    issueData = combined.sortedByDescending { it.createdAt }
+                    issueCount = combined.size
+                }
+            } catch (_: Exception) { }
         }
     }
 
@@ -92,13 +110,15 @@ class ToolWindowState(project: Project) {
         syncPhase = SyncPhase.FETCHING_ISSUES
         statusText = "Fetching issues..."
         statusColor = UIUtil.getContextHelpForeground()
+        issueCount = 0; prCount = 0; branchCount = 0
+        lastSyncTime = null
         thread {
             try {
                 val issues = runBlocking { provider.getIssues(o, r, "open", null, null) }
                 val closed = runBlocking { provider.getIssues(o, r, "closed", null, null) }
                 val combined = issues + closed
                 SwingUtilities.invokeLater {
-                    issueData = combined
+                    issueData = combined.sortedByDescending { it.createdAt }
                     issueCount = combined.size
                     syncPhase = SyncPhase.FETCHING_PRS
                     statusText = "Fetching pull requests..."
@@ -108,7 +128,7 @@ class ToolWindowState(project: Project) {
                 val prsClosed = runBlocking { provider.getPullRequests(o, r, "closed") }
                 val combinedPR = prsOpen + prsClosed
                 SwingUtilities.invokeLater {
-                    prData = combinedPR
+                    prData = combinedPR.sortedByDescending { it.createdAt }
                     prCount = combinedPR.size
                     syncPhase = SyncPhase.FETCHING_BRANCHES
                     statusText = "Fetching branches..."
@@ -145,7 +165,45 @@ class ToolWindowState(project: Project) {
 
     fun createIssue() {
         val o = remoteOwner ?: return; val r = remoteRepo ?: return
-        CreateIssueDialog(myProject, o, r, provider).showAndGet(); refresh()
+        val dialog = CreateIssueDialog(myProject, o, r, provider)
+        if (!dialog.showAndGet()) return
+        statusText = "Creating issue…"
+        statusColor = UIUtil.getContextHelpForeground()
+        syncPhase = SyncPhase.RENDERING
+        com.intellij.openapi.progress.ProgressManager.getInstance().run(object :
+            com.intellij.openapi.progress.Task.Backgroundable(myProject, "Creating issue on GitHub…", true) {
+            override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
+                indicator.isIndeterminate = true
+                try {
+                    val issue = runBlocking {
+                        provider.createIssue(o, r, dialog.resultTitle, dialog.resultDescription, dialog.resultLabels, dialog.resultAssignees)
+                    }
+                    SwingUtilities.invokeLater {
+                        issueData = listOf(issue) + issueData
+                        issueCount = issueData.size
+                    }
+                } catch (e: Exception) {
+                    SwingUtilities.invokeLater {
+                        com.intellij.openapi.ui.Messages.showErrorDialog(myProject, "Failed to create issue: ${e.message}", "Error")
+                    }
+                }
+            }
+            override fun onFinished() {
+                syncPhase = SyncPhase.IDLE
+                statusText = "Synced"
+                statusColor = UIUtil.getLabelForeground()
+            }
+        })
+    }
+
+    fun updateIssueState(issueNumber: Int, newState: IssueState) {
+        issueData = issueData.map { if (it.number == issueNumber) it.copy(state = newState) else it }
+        selectedIssue = selectedIssue?.let { if (it.number == issueNumber) it.copy(state = newState) else it }
+    }
+
+    fun updatePRState(prNumber: Int, newState: PRState) {
+        prData = prData.map { if (it.number == prNumber) it.copy(state = newState) else it }
+        selectedPR = selectedPR?.let { if (it.number == prNumber) it.copy(state = newState) else it }
     }
 
     fun createPR() {
@@ -173,7 +231,7 @@ class ToolWindowState(project: Project) {
                 statusText = "On $name"
                 statusColor = UIUtil.getLabelForeground()
                 syncPhase = SyncPhase.IDLE
-                PluginNotifications.info(myProject, "Switched", "Now on $name")
+                PluginNotifications.info(myProject, "Switched branch", "Now on $name")
             }
         })
     }

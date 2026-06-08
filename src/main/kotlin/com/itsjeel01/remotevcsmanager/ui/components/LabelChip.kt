@@ -16,15 +16,15 @@ import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 
 fun String.hexToColor(): Color = try {
     Color(
-        substring(0, 2).toInt(16),
-        substring(2, 4).toInt(16),
-        substring(4, 6).toInt(16)
+        substring(0, 2).toInt(16) / 255f,
+        substring(2, 4).toInt(16) / 255f,
+        substring(4, 6).toInt(16) / 255f
     )
 } catch (_: Exception) { Color.Gray }
 
 private fun Color.textColor(): Color {
-    val luminance = (red * 299 + green * 587 + blue * 114) / 1000
-    return if (luminance > 140) Color.Black else Color.White
+    val luminance = (red * 299f + green * 587f + blue * 114f) / 1000f
+    return if (luminance > 0.5f) Color.Black else Color.White
 }
 
 @Composable
@@ -38,7 +38,7 @@ fun LabelChip(
     val theme = LocalThemeColors.current
     val chipColor = label.color.hexToColor()
     val textColor = chipColor.textColor()
-
+    val borderColor = if (theme.Text.primary.luminance() > 0.5f) Color.White else Color.Black
 
     val surfaceModifier = if (onToggle != null) {
         modifier.clickable { onToggle() }
@@ -46,19 +46,20 @@ fun LabelChip(
         modifier
     }
 
-
     Surface(
         shape = RoundedCornerShape(4.dp),
-        color = chipColor,
-        border = if (selected) BorderStroke(2.dp, theme.Border.focused) else null,
+        color = if (selected) chipColor else chipColor.copy(alpha = 0.65f),
+        border = if (selected) BorderStroke(1.5.dp, borderColor) else BorderStroke(0.5.dp, chipColor.copy(alpha = 0.3f)),
         modifier = surfaceModifier
     ) {
         Text(
-            label.name,
+            if (selected) "✓ ${label.name}" else label.name,
             color = textColor,
             fontSize = fs.xsmall,
-
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }
+
+private fun Color.luminance(): Float =
+    (red * 299f + green * 587f + blue * 114f) / 1000f
