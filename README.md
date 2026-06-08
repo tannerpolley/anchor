@@ -1,117 +1,77 @@
-# IntelliJ Platform Plugin Template
+# Anchor — Remote VCS for JetBrains
 
-[![Twitter Follow](https://img.shields.io/badge/follow-%40JBPlatform-1DA1F2?logo=twitter)](https://twitter.com/JBPlatform)
-[![Developers Forum](https://img.shields.io/badge/JetBrains%20Platform-Join-blue)][jb:forum]
+**"Drop anchor. Stay in your IDE."**
 
-## Plugin template structure
+Browse GitHub issues, pull requests, and branches without leaving your editor.
+Theme-aware rendering that matches your IDE — light or dark, it just works.
 
-A generated project contains the following content structure:
+## Features
 
+- **Issues, PRs & Branches** — browse, filter, and manage all three with native IDE tool window
+- **GitHub-native rendering** — descriptions and comments render using GitHub's own markdown API, so they look exactly like they do on github.com
+- **Timeline view** — PR commits appear inline in a chronological timeline with author and timestamp
+- **Theme-aware** — all HTML content adapts to your active IDE theme. Switch from light to dark and every element follows
+- **Single-click checkout** — switch branches from the tool window using IntelliJ's native git infrastructure
+- **Create issues** — full form with label chips, assignee field, and markdown description
+- **Open on GitHub** — right-click any file to view it on GitHub at the current line
+
+## Installation
+
+### From JetBrains Marketplace
+1. Open your IDE → **Settings** → **Plugins** → **Marketplace**
+2. Search for **"Anchor — Remote VCS"**
+3. Click **Install**
+4. Set up a GitHub personal access token in **Settings** → **Tools** → **Anchor — Remote VCS**
+
+### Manual installation
+```bash
+git clone https://github.com/itsjeel01/remoteVcsManager.git
+cd remoteVcsManager
+./gradlew buildPlugin
+# Install from build/distributions/ via Settings → Plugins → ⚙ → Install from Disk
 ```
-.
-├── .run/                   Predefined Run/Debug Configurations
-├── build/                  Output build directory
-├── gradle
-│   ├── wrapper/            Gradle Wrapper
-├── src                     Plugin sources
-│   ├── main
-│   │   ├── kotlin/         Kotlin production sources
-│   │   └── resources/      Resources - plugin.xml, icons, messages
-├── .gitignore              Git ignoring rules
-├── build.gradle.kts        Gradle build configuration
-├── gradle.properties       Gradle configuration properties
-├── gradlew                 *nix Gradle Wrapper script
-├── gradlew.bat             Windows Gradle Wrapper script
-├── README.md               README
-└── settings.gradle.kts     Gradle project settings
-```
 
-In addition to the configuration files, the most crucial part is the `src` directory, which contains our implementation
-and the manifest for our plugin – [plugin.xml][file:plugin.xml].
+## Usage
 
-> [!NOTE]
-> To use Java in your plugin, create the `/src/main/java` directory.
+1. Open a project with a GitHub remote configured
+2. Open the **Remote VCS** tool window (right sidebar)
+3. If this is your first time, set your GitHub PAT in **Settings → Tools → Anchor — Remote VCS**
+4. The tool window will auto-detect your remote and load all issues, PRs, and branches
 
-## Plugin configuration file
+**Keyboard shortcuts** (when focused in the tool window):
+- `R` — refresh data
+- `Esc` — go back from detail view
 
-The plugin configuration file is a [plugin.xml][file:plugin.xml] file located in the `src/main/resources/META-INF`
-directory.
-It provides general information about the plugin, its dependencies, extensions, and listeners.
+## Contributing
 
-You can read more about this file in the [Plugin Configuration File][docs:plugin.xml] section of our documentation.
+Issues, PRs, and ideas are welcome — this is an early-stage project and your input shapes it.
 
-If you're still not quite sure what this is all about, read our
-introduction: [What is the IntelliJ Platform?][docs:intro]
+- **Found a bug?** [Open an issue](../../issues/new?template=bug_report.md)
+- **Have a feature request?** [Open an issue](../../issues/new?template=feature_request.md)
+- **Want to contribute code?** Fork, branch, and PR — see conventions below
 
-$H$H Predefined Run/Debug configurations
+### Commit conventions
+- `feat:` — new features
+- `fix:` — bug fixes
+- `chore:` — build, deps, cleanup
+- `docs:` — documentation
+- `refactor:` — code restructuring
+- Commits should be atomic — one logical change per commit
 
-Within the default project structure, there is a `.run` directory provided containing predefined *Run/Debug
-configurations* that expose corresponding Gradle tasks:
+### Branch conventions
+- `main` — stable, release-ready
+- `develop` — integration branch for features
+- `feat/*` — feature branches (e.g., `feat/gitlab-support`)
+- `fix/*` — bug fix branches
+- Branch from `develop`, PR back to `develop`
 
-| Configuration name | Description                                                                                                                                                                         |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run Plugin         | Runs [`:runIde`][gh:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.                                        |
-| Run Tests          | Runs [`:test`][gradle:lifecycle-tasks] Gradle task.                                                                                                                                 |
-| Run Verifications  | Runs [`:verifyPlugin`][gh:intellij-platform-gradle-plugin-verifyPlugin] IntelliJ Platform Gradle Plugin task to check the plugin compatibility against the specified IntelliJ IDEs. |
+## Tech stack
 
-> [!NOTE]
-> You can find the logs from the running task in the `idea.log` tab.
+- Kotlin + Compose Multiplatform for UI
+- Chromium Embedded Framework (JCEF) for HTML rendering
+- GitHub REST API v3 + GFM markdown rendering
+- OkHttp for networking, Gson for JSON parsing
 
-## Publishing the plugin
+## License
 
-> [!TIP]
-> Make sure to follow all guidelines listed in [Publishing a Plugin][docs:publishing] to follow all recommended and
-> required steps.
-
-Releasing a plugin to [JetBrains Marketplace](https://plugins.jetbrains.com) is a straightforward operation that uses
-the `publishPlugin` Gradle task provided by
-the [intellij-platform-gradle-plugin][gh:intellij-platform-gradle-plugin-docs].
-
-You can also upload the plugin to the [JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/upload)
-manually via UI.
-
-## Useful links
-
-- [IntelliJ Platform SDK Plugin SDK][docs]
-- [IntelliJ Platform Gradle Plugin Documentation][gh:intellij-platform-gradle-plugin-docs]
-- [IntelliJ Platform Explorer][jb:ipe]
-- [JetBrains Marketplace Quality Guidelines][jb:quality-guidelines]
-- [IntelliJ Platform UI Guidelines][jb:ui-guidelines]
-- [JetBrains Marketplace Paid Plugins][jb:paid-plugins]
-- [IntelliJ SDK Code Samples][gh:code-samples]
-
-[docs]: https://plugins.jetbrains.com/docs/intellij
-
-[docs:intro]: https://plugins.jetbrains.com/docs/intellij/intellij-platform.html?from=IJPluginTemplate
-
-[docs:plugin.xml]: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html?from=IJPluginTemplate
-
-[docs:publishing]: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate
-
-[file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
-
-[gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
-
-[gh:intellij-platform-gradle-plugin]: https://github.com/JetBrains/intellij-platform-gradle-plugin
-
-[gh:intellij-platform-gradle-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
-
-[gh:intellij-platform-gradle-plugin-runIde]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html#runIde
-
-[gh:intellij-platform-gradle-plugin-verifyPlugin]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html#verifyPlugin
-
-[gradle:lifecycle-tasks]: https://docs.gradle.org/current/userguide/java_plugin.html#lifecycle_tasks
-
-[jb:github]: https://github.com/JetBrains/.github/blob/main/profile/README.md
-
-[jb:forum]: https://platform.jetbrains.com/
-
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-
-[jb:paid-plugins]: https://plugins.jetbrains.com/docs/marketplace/paid-plugins-marketplace.html
-
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-
-[jb:ipe]: https://jb.gg/ipe
-
-[jb:ui-guidelines]: https://jetbrains.github.io/ui
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.

@@ -22,6 +22,7 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2025.2.4")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        bundledPlugin("Git4Idea")
     }
 
     // Compose for Desktop (bundled with IntelliJ 2025.2+, but declare explicitly for compilation)
@@ -41,7 +42,7 @@ intellijPlatform {
 
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "252.25557"
+            sinceBuild = "253"
         }
 
         changeNotes = """

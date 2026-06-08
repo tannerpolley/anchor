@@ -55,7 +55,7 @@ class RemoteVcsSettingsPanel {
 
     private var validateCallback: (() -> Unit)? = null
 
-    // Using Kotlin UI DSL v2 for native IDEA layout proportions
+
     val panel: JComponent = panel {
         group("Connection") {
             row {
@@ -79,7 +79,7 @@ class RemoteVcsSettingsPanel {
                 cell(validateBtn)
                 cell(clearBtn)
             }
-            // Passing an empty string pushes the helper text/link perfectly under the text field
+
             row("") {
                 cell(tokenStatus)
             }

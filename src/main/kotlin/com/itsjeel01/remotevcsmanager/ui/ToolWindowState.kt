@@ -15,13 +15,19 @@ import com.itsjeel01.remotevcsmanager.models.*
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.settings.SettingsChangeNotifier
 import kotlinx.coroutines.runBlocking
-import java.text.SimpleDateFormat
-import java.util.*
-import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import kotlin.concurrent.thread
 
 sealed class Screen { data object List : Screen(); data object Detail : Screen() }
+
+enum class SyncPhase {
+    IDLE,
+    FETCHING_ISSUES,
+    FETCHING_PRS,
+    FETCHING_BRANCHES,
+    RENDERING,
+    ERROR
+}
 
 class ToolWindowState(project: Project) {
 
@@ -36,6 +42,8 @@ class ToolWindowState(project: Project) {
 
     var statusText by mutableStateOf("Ready")
     var statusColor by mutableStateOf(UIUtil.getContextHelpForeground())
+    var syncPhase by mutableStateOf(SyncPhase.IDLE)
+    var lastSyncTime by mutableStateOf<String?>(null)
 
     var activeScreen: Screen by mutableStateOf(Screen.List)
     var issueFilterState by mutableStateOf("all")
@@ -47,6 +55,12 @@ class ToolWindowState(project: Project) {
     var selectedIssue by mutableStateOf<Issue?>(null)
     var selectedPR by mutableStateOf<PullRequest?>(null)
 
+    var issueCount by mutableStateOf(0)
+    var prCount by mutableStateOf(0)
+    var branchCount by mutableStateOf(0)
+    var activeTab by mutableStateOf(0)
+    var gitRoot by mutableStateOf<java.io.File?>(null)
+
     init {
         reloadConfig()
         ApplicationManager.getApplication().messageBus.connect().subscribe(
@@ -55,48 +69,75 @@ class ToolWindowState(project: Project) {
         )
     }
 
-    var activeTab by mutableStateOf(0)
-
     fun reloadConfig() {
         remoteDetected = gitDetector.hasRemote() && provider.isConfigured()
         if (remoteDetected) {
             val info = gitDetector.detect()
             if (info != null) {
                 remoteOwner = info.owner; remoteRepo = info.repoName; currentBranch = info.currentBranch
+                gitRoot = info.gitRoot
             }
             activeScreen = Screen.List; refresh()
         } else {
             remoteOwner = null; remoteRepo = null; currentBranch = null
             statusText = if (!gitDetector.hasRemote()) "Set a git remote first" else "Configure token in Settings"
             statusColor = UIUtil.getContextHelpForeground()
+            syncPhase = SyncPhase.IDLE
             issueData = emptyList(); prData = emptyList(); branchData = emptyList()
         }
     }
 
     fun refresh(silent: Boolean = false) {
         val o = remoteOwner ?: run { reloadConfig(); return }; val r = remoteRepo ?: return
-        statusText = "Loading..."; statusColor = UIUtil.getContextHelpForeground()
+        syncPhase = SyncPhase.FETCHING_ISSUES
+        statusText = "Fetching issues..."
+        statusColor = UIUtil.getContextHelpForeground()
         thread {
             try {
                 val issues = runBlocking { provider.getIssues(o, r, "open", null, null) }
                 val closed = runBlocking { provider.getIssues(o, r, "closed", null, null) }
+                val combined = issues + closed
+                SwingUtilities.invokeLater {
+                    issueData = combined
+                    issueCount = combined.size
+                    syncPhase = SyncPhase.FETCHING_PRS
+                    statusText = "Fetching pull requests..."
+                }
+
                 val prsOpen = runBlocking { provider.getPullRequests(o, r, "open") }
                 val prsClosed = runBlocking { provider.getPullRequests(o, r, "closed") }
-                val branches = runBlocking { provider.getBranches(o, r) }
+                val combinedPR = prsOpen + prsClosed
                 SwingUtilities.invokeLater {
-                    issueData = issues + closed; prData = prsOpen + prsClosed; branchData = branches
-                    statusText = "Synced successfully"; statusColor = UIUtil.getLabelForeground()
+                    prData = combinedPR
+                    prCount = combinedPR.size
+                    syncPhase = SyncPhase.FETCHING_BRANCHES
+                    statusText = "Fetching branches..."
+                }
+
+                val branches = runBlocking { provider.getBranches(o, r) }
+                val now = TimeFormat.now()
+                SwingUtilities.invokeLater {
+                    branchData = branches
+                    branchCount = branches.size
+                    lastSyncTime = now
+                    syncPhase = SyncPhase.IDLE
+                    statusText = "Synced"
+                    statusColor = UIUtil.getLabelForeground()
                 }
             } catch (e: Exception) {
                 SwingUtilities.invokeLater {
-                    statusText = "Error syncing data"; statusColor = UIUtil.getErrorForeground()
+                    syncPhase = SyncPhase.ERROR
+                    statusText = "Sync failed"
+                    statusColor = UIUtil.getErrorForeground()
                     val tw = com.intellij.openapi.wm.ToolWindowManager.getInstance(myProject)
-                        .getToolWindow("Remote VCS Manager")
-                    JBPopupFactory.getInstance().createHtmlTextBalloonBuilder(
-                        e.message ?: "Failed to fetch data", MessageType.ERROR, null
-                    ).setTitle("Sync Failed").createBalloon().show(
-                        JBPopupFactory.getInstance().guessBestPopupLocation(tw?.component!!), Balloon.Position.below
-                    )
+                        .getToolWindow("Remote VCS")
+                    if (tw != null) {
+                        JBPopupFactory.getInstance().createHtmlTextBalloonBuilder(
+                            e.message ?: "Failed to fetch data", MessageType.ERROR, null
+                        ).setTitle("Sync Failed").createBalloon().show(
+                            JBPopupFactory.getInstance().guessBestPopupLocation(tw.component), Balloon.Position.below
+                        )
+                    }
                 }
             }
         }
@@ -113,26 +154,31 @@ class ToolWindowState(project: Project) {
     }
 
     fun checkout(name: String) {
-        try {
-            val root = gitDetector.detect()?.gitRoot ?: return
-            Runtime.getRuntime().exec(arrayOf("git", "checkout", name), null, root)
-            JOptionPane.showMessageDialog(null, "Switched to $name")
-        } catch (e: Exception) {
-            JOptionPane.showMessageDialog(null, "Failed: ${e.message}", "Error", JOptionPane.ERROR_MESSAGE)
+        val repo = try {
+            git4idea.repo.GitRepositoryManager.getInstance(myProject).repositories
+                .firstOrNull { it.root.toNioPath().toString() == gitRoot?.toPath()?.toString() }
+                ?: git4idea.repo.GitRepositoryManager.getInstance(myProject).repositories.firstOrNull()
+        } catch (_: Exception) { null }
+        if (repo == null) {
+            PluginNotifications.error(myProject, "Checkout failed", "No git repository found")
+            return
         }
+        syncPhase = SyncPhase.RENDERING
+        statusText = "Switching to $name…"
+        statusColor = UIUtil.getContextHelpForeground()
+        val brancher = git4idea.branch.GitBrancher.getInstance(myProject)
+        brancher.checkout(name, false, listOf(repo), java.lang.Runnable {
+            SwingUtilities.invokeLater {
+                currentBranch = name
+                statusText = "On $name"
+                statusColor = UIUtil.getLabelForeground()
+                syncPhase = SyncPhase.IDLE
+                PluginNotifications.info(myProject, "Switched", "Now on $name")
+            }
+        })
     }
 
     fun showIssueDetail(issue: Issue) { selectedIssue = issue; selectedPR = null; activeTab = 0; activeScreen = Screen.Detail }
     fun showPRDetail(pr: PullRequest) { selectedPR = pr; selectedIssue = null; activeTab = 1; activeScreen = Screen.Detail }
     fun backToList() { selectedIssue = null; selectedPR = null; activeScreen = Screen.List }
-
-    companion object {
-        fun fmt(iso: String): String = try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-            val d = sdf.parse(iso.take(19)) ?: return iso
-            val diff = Date().time - d.time; val m = diff / 60000; val h = m / 60; val dd = h / 24; val w = dd / 7
-            when { m < 1 -> "now"; m < 60 -> "${m}m"; h < 24 -> "${h}h"; dd < 7 -> "${dd}d"; w < 5 -> "${w}w"
-                else -> SimpleDateFormat("MMM d", Locale.US).format(d) }
-        } catch (_: Exception) { iso }
-    }
 }

@@ -2,14 +2,14 @@ package com.itsjeel01.remotevcsmanager.ui.detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.intellij.icons.AllIcons
@@ -27,6 +27,8 @@ import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
 import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
+import com.itsjeel01.remotevcsmanager.ui.components.ClickableIcon
+import com.itsjeel01.remotevcsmanager.ui.TimeFormat
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 import kotlinx.coroutines.Dispatchers
@@ -59,34 +61,14 @@ fun IssueDetailContent(
             .fillMaxSize()
             .background(theme.Bg.primary)) {
         IssueDetailHeader(issue, onBack, onRefresh, provider, owner, repo)
-        LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            item {
-                Spacer(Modifier.height(8.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    elevation = 0.dp,
-                    backgroundColor = theme.Bg.card,
-                    border = BorderStroke(0.5.dp, theme.Border.default.copy(alpha = 0.4f))
-                ) {
-                    Column(Modifier.padding(8.dp)) {
-                        Text("Description", fontWeight = FontWeight.Bold, fontSize = fs.xsmall,
-                            color = theme.Text.secondary)
-                        Spacer(Modifier.height(4.dp))
-                        MarkdownCompose.Block(issue.body ?: "_No description provided._")
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-            if (comments.isNotEmpty()) {
-                item {
-                    Text("Comments (${comments.size})", fontWeight = FontWeight.Bold, fontSize = fs.label,
-                        color = theme.Text.secondary)
-                }
-                items(comments) { CommentCard(it); Spacer(Modifier.height(6.dp)) }
-            }
-            item { Spacer(Modifier.height(8.dp)) }
-        }
+        VcsDetailHtmlRenderer(
+            description = issue.body,
+            comments = comments,
+            provider = provider,
+            context = "$owner/$repo",
+            modifier = Modifier.weight(1f)
+        )
+        val isOpen = issue.state == IssueState.OPEN
         CommentInputBar(commentText, { commentText = it }, {
             if (commentText.isNotBlank()) {
                 val t = commentText; commentText = ""
@@ -97,6 +79,15 @@ fun IssueDetailContent(
                     }
                 }
             }
+        }, extraActions = {
+            CompactButton(
+                text = if (isOpen) "Close" else "Reopen",
+                onClick = {
+                    if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
+                    else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
+                },
+                variant = ButtonVariant.Primary
+            )
         })
     }
 }
@@ -108,72 +99,59 @@ fun IssueDetailHeader(
 ) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(theme.Bg.surface)
-            .padding(8.dp, 4.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                PlatformIcon(AllIcons.Actions.Back, contentDescription = "Back")
-            }
-            Text("#${issue.number} ${issue.title}", fontWeight = FontWeight.Bold, fontSize = fs.title,
-                color = theme.Text.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f))
-            IconButton(onClick = { BrowserUtil.browse(issue.url) }) {
-                PlatformIcon(AllIcons.Ide.External_link_arrow, contentDescription = "Open in browser")
-            }
-        }
-        Row(modifier = Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            StateBadgeForIssue(issue.state);
-            Spacer(Modifier.width(6.dp))
-            Text(issue.author, fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(4.dp))
-            Text(fmt(issue.createdAt), fontSize = fs.small, color = theme.Text.secondary); Spacer(Modifier.width(6.dp))
-            issue.labels.take(6).forEach { label ->
-                LabelChip(label = label, modifier = Modifier.padding(end = 3.dp))
-            }
-            Spacer(Modifier.weight(1f))
-            val isOpen = issue.state == IssueState.OPEN
-            CompactButton(
-                text = if (isOpen) "Close" else "Reopen",
-                onClick = {
-                    if (isOpen) bg({ provider.closeIssue(owner, repo, issue.number) }, onRefresh)
-                    else bg({ provider.updateIssue(owner, repo, issue.number, state = "open") }, onRefresh)
-                },
-                variant = ButtonVariant.Primary
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ClickableIcon(AllIcons.Actions.Back, onClick = onBack, description = "Back")
+            Text(
+                "#${issue.number} ${issue.title}",
+                fontWeight = FontWeight.Bold,
+                fontSize = fs.title,
+                color = theme.Text.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            ClickableIcon(AllIcons.Ide.External_link_arrow, onClick = { BrowserUtil.browse(issue.url) }, description = "Open in browser")
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.padding(start = 28.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StateBadgeForIssue(issue.state)
+            Text(issue.author, fontSize = fs.small, color = theme.Text.secondary)
+            Text(TimeFormat.relative(issue.createdAt), fontSize = fs.small, color = theme.Text.secondary)
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                issue.labels.forEach { label ->
+                    LabelChip(label = label)
+                }
+            }
         }
     }
     Divider(color = theme.divider, thickness = 0.5.dp)
 }
 
 @Composable
-fun CommentCard(comment: IssueComment) {
-    val theme = LocalThemeColors.current
-    val fs = LocalPlatformFonts.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(6.dp),
-        elevation = 0.dp,
-        backgroundColor = theme.Bg.card,
-        border = BorderStroke(0.5.dp, theme.Border.default.copy(alpha = 0.4f))
-    ) {
-        Column(Modifier.padding(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.author, fontWeight = FontWeight.Bold, fontSize = fs.label, color = theme.Text.primary)
-                Spacer(Modifier.width(6.dp))
-                Text(fmt(comment.createdAt), fontSize = fs.xsmall, color = theme.Text.secondary)
-            }
-            Spacer(Modifier.height(4.dp))
-            MarkdownCompose.Block(comment.body)
-        }
-    }
-}
-
-@Composable
 fun CommentInputBar(
-    text: String, onTextChange: (String) -> Unit, onSubmit: () -> Unit) {
+    text: String, onTextChange: (String) -> Unit, onSubmit: () -> Unit,
+    extraActions: @Composable RowScope.() -> Unit = {}
+) {
     val theme = LocalThemeColors.current
     val fs = LocalPlatformFonts.current
     Column(
@@ -194,12 +172,18 @@ fun CommentInputBar(
                 backgroundColor = theme.Bg.input
             )
         )
-        Row(Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            extraActions()
+            Spacer(Modifier.width(8.dp))
             TextButton(onClick = onSubmit, enabled = text.isNotBlank()) {
                 Text("Post Comment", fontSize = fs.small,
-                    color = if (text.isNotBlank()) theme.Text.link else theme.Text.disabled)
+                    color = if (text.isNotBlank()) theme.Text.secondary else theme.Text.disabled)
             }
         }
     }
@@ -219,10 +203,4 @@ internal fun bg(fn: suspend () -> Unit, onDone: () -> Unit) {
     })
 }
 
-internal fun fmt(iso: String): String = try {
-    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-    val d = sdf.parse(iso.take(19)) ?: return iso
-    val diff = Date().time - d.time; val m = diff / 60000; val h = m / 60; val dd = h / 24; val w = dd / 7
-    when { m < 1 -> "now"; m < 60 -> "${m}m ago"; h < 24 -> "${h}h ago"; dd < 7 -> "${dd}d ago"; w < 5 -> "${w}w ago"
-        else -> SimpleDateFormat("MMM d", Locale.US).format(d) }
-} catch (_: Exception) { iso }
+

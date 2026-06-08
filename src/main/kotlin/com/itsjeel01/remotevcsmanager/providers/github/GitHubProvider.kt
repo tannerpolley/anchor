@@ -11,6 +11,7 @@ import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.models.RemoteAccount
 import com.itsjeel01.remotevcsmanager.models.RemoteRepository
 import com.itsjeel01.remotevcsmanager.providers.RemoteVcsProvider
+import com.itsjeel01.remotevcsmanager.ui.VcsCache
 
 /**
  * GitHub implementation of the RemoteVcsProvider interface.
@@ -38,9 +39,7 @@ class GitHubProvider(
     override suspend fun validateToken(): Boolean = apiClient.validateToken()
 
     override suspend fun getCurrentUser(): RemoteAccount {
-        val result = apiClient.getCurrentUser()
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to get current user")
-        val user = result.getOrNull()!!
+        val user = apiClient.getCurrentUser().getOrThrow()
         return RemoteAccount(
             id = apiClient.safeLong(user, "id").toString(),
             login = apiClient.safeString(user, "login") ?: "unknown",
@@ -52,27 +51,19 @@ class GitHubProvider(
     }
 
     override suspend fun getRepositories(): List<RemoteRepository> {
-        val result = apiClient.getRepositories()
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list repositories")
-        return result.getOrNull()!!.map { json -> toRemoteRepository(json) }
+        return apiClient.getRepositories().getOrThrow().map { json -> toRemoteRepository(json) }
     }
 
     override suspend fun getRepository(owner: String, repo: String): RemoteRepository {
-        val result = apiClient.getRepository(owner, repo)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to get repository")
-        return toRemoteRepository(result.getOrNull()!!)
+        return toRemoteRepository(apiClient.getRepository(owner, repo).getOrThrow())
     }
 
     override suspend fun createRepository(name: String, description: String?, isPrivate: Boolean): RemoteRepository {
-        val result = apiClient.createRepository(name, description, isPrivate)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to create repository")
-        return toRemoteRepository(result.getOrNull()!!)
+        return toRemoteRepository(apiClient.createRepository(name, description, isPrivate).getOrThrow())
     }
 
     override suspend fun getPullRequests(owner: String, repo: String, state: String): List<PullRequest> {
-        val result = apiClient.getPullRequests(owner, repo, state)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list pull requests")
-        return result.getOrNull()!!.map { json -> toPullRequest(json) }
+        return apiClient.getPullRequests(owner, repo, state).getOrThrow().map { json -> toPullRequest(json) }
     }
 
     override suspend fun getIssues(
@@ -82,27 +73,24 @@ class GitHubProvider(
         filter: String?,
         labels: String?
     ): List<Issue> {
-        val result = apiClient.getIssues(owner, repo, state, filter, labels)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list issues")
-        return result.getOrNull()!!.map { json -> toIssue(json) }.filter { !it.isPullRequest }
+        return apiClient.getIssues(owner, repo, state, filter, labels)
+            .getOrThrow()
+            .map { json -> toIssue(json) }
+            .filter { !it.isPullRequest }
     }
 
     override suspend fun createIssue(
         owner: String, repo: String, title: String, body: String?,
         labels: List<String>?, assignees: List<String>?
     ): Issue {
-        val result = apiClient.createIssue(owner, repo, title, body, labels, assignees)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to create issue")
-        return toIssue(result.getOrNull()!!)
+        return toIssue(apiClient.createIssue(owner, repo, title, body, labels, assignees).getOrThrow())
     }
 
     override suspend fun updateIssue(
         owner: String, repo: String, issueNumber: Int,
         state: String?, title: String?, body: String?
     ): Issue {
-        val result = apiClient.updateIssue(owner, repo, issueNumber, state, title, body)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to update issue")
-        return toIssue(result.getOrNull()!!)
+        return toIssue(apiClient.updateIssue(owner, repo, issueNumber, state, title, body).getOrThrow())
     }
 
     override suspend fun closeIssue(owner: String, repo: String, issueNumber: Int): Issue {
@@ -110,9 +98,7 @@ class GitHubProvider(
     }
 
     override suspend fun addIssueComment(owner: String, repo: String, issueNumber: Int, body: String): IssueComment {
-        val result = apiClient.addIssueComment(owner, repo, issueNumber, body)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to add comment")
-        val json = result.getOrNull()!!
+        val json = apiClient.addIssueComment(owner, repo, issueNumber, body).getOrThrow()
         return IssueComment(
             id = apiClient.safeLong(json, "id").toString(),
             body = apiClient.safeString(json, "body") ?: "",
@@ -125,9 +111,12 @@ class GitHubProvider(
     }
 
     override suspend fun getIssueComments(owner: String, repo: String, issueNumber: Int): List<IssueComment> {
+        val cacheKey = "comments_${owner}_${repo}_$issueNumber"
+        val cached: List<IssueComment>? = VcsCache.getApi(cacheKey)
+        if (cached != null) return cached
         val result = apiClient.getIssueComments(owner, repo, issueNumber)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list comments")
-        return result.getOrNull()!!.map { json ->
+            .getOrThrow()
+            .map { json ->
             val user = apiClient.safeObject(json, "user")
             IssueComment(
                 id = apiClient.safeLong(json, "id").toString(),
@@ -137,16 +126,18 @@ class GitHubProvider(
                 updatedAt = apiClient.safeString(json, "updated_at") ?: ""
             )
         }
+        VcsCache.putApi(cacheKey, result)
+        return result
     }
 
     override suspend fun getBranches(owner: String, repo: String): List<GitBranch> {
-        val result = apiClient.getBranches(owner, repo)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list branches")
-        return result.getOrNull()!!.map { json ->
+        return apiClient.getBranches(owner, repo)
+            .getOrThrow()
+            .map { json ->
             val commit = apiClient.safeObject(json, "commit")
             GitBranch(
                 name = apiClient.safeString(json, "name") ?: "unknown",
-                isDefault = false, // We can't know default from this endpoint alone
+                isDefault = false,  // We can't know default from this endpoint alone
                 sha = if (commit != null) apiClient.safeString(commit, "sha") ?: "" else "",
                 commitUrl = if (commit != null) apiClient.safeString(commit, "url") else null
             )
@@ -154,22 +145,40 @@ class GitHubProvider(
     }
 
     override suspend fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): List<CommitSummary> {
+        val cacheKey = "commits_${owner}_${repo}_$prNumber"
+        val cached: List<CommitSummary>? = VcsCache.getApi(cacheKey)
+        if (cached != null) return cached
         val result = apiClient.getPullRequestCommits(owner, repo, prNumber)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list PR commits")
-        return result.getOrNull()!!.map { json ->
+            .getOrThrow()
+            .map { json ->
             val commit = apiClient.safeObject(json, "commit")
+            val committer = if (commit != null) apiClient.safeObject(commit, "committer") else null
+            val author = if (commit != null) {
+                val commitAuthor = apiClient.safeObject(commit, "author")
+                commitAuthor?.let { apiClient.safeString(it, "name") }
+                    ?: apiClient.safeString(commit, "author")?.let {
+                        // `author` field on commit object is sometimes the person object
+                        null
+                    }
+            } else null
+            val authoredAt = committer?.let { apiClient.safeString(it, "date") }
+                ?: (commit?.let { apiClient.safeString(it, "committer_date") })
             CommitSummary(
                 sha = apiClient.safeString(json, "sha") ?: "",
                 message = if (commit != null) apiClient.safeString(commit, "message")?.lines()?.firstOrNull() ?: "" else "",
-                url = apiClient.safeString(json, "html_url") ?: ""
+                url = apiClient.safeString(json, "html_url") ?: "",
+                author = author,
+                createdAt = authoredAt
             )
         }
+        VcsCache.putApi(cacheKey, result)
+        return result
     }
 
     override suspend fun getLabels(owner: String, repo: String): List<Label> {
-        val result = apiClient.getLabels(owner, repo)
-        if (result.isFailure) throw result.exceptionOrNull() ?: Exception("Failed to list labels")
-        return result.getOrNull()!!.map { json ->
+        return apiClient.getLabels(owner, repo)
+            .getOrThrow()
+            .map { json ->
             Label(
                 name = apiClient.safeString(json, "name") ?: "",
                 color = apiClient.safeString(json, "color") ?: "888888"
@@ -182,6 +191,11 @@ class GitHubProvider(
 
     override fun getCloneUrl(owner: String, repo: String, useSsh: Boolean): String =
         apiClient.getCloneUrl(owner, repo, useSsh)
+
+    override suspend fun renderMarkdown(markdown: String, context: String?): String {
+        val result = apiClient.renderMarkdown(markdown, context)
+        return result.getOrDefault(markdown)
+    }
 
     private fun toRemoteRepository(json: com.google.gson.JsonObject): RemoteRepository {
         val owner = apiClient.safeObject(json, "owner")
@@ -203,7 +217,7 @@ class GitHubProvider(
         val user = apiClient.safeObject(json, "user")
         val head = apiClient.safeObject(json, "head")
         val base = apiClient.safeObject(json, "base")
-        // Use merged_at (not merged boolean) — it's always present in list responses
+
         val mergedAt = json.get("merged_at")
         val isMerged = mergedAt != null && !(mergedAt is com.google.gson.JsonNull) && mergedAt.asString.isNotBlank()
         return PullRequest(

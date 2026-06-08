@@ -42,7 +42,7 @@ class CreateRepositoryAction : AnAction(), DumbAware {
             return
         }
 
-        // Show creation dialog
+
         val dialog = CreateRepositoryDialog()
         if (!dialog.showAndGet()) return
 
@@ -55,7 +55,7 @@ class CreateRepositoryAction : AnAction(), DumbAware {
             return
         }
 
-        // Create in background
+
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Creating repository '$name'...", true) {
             override fun run(indicator: ProgressIndicator) {
                 indicator.isIndeterminate = true

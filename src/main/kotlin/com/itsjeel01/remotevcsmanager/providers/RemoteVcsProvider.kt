@@ -28,7 +28,7 @@ abstract class RemoteVcsProvider {
     abstract suspend fun createRepository(name: String, description: String?, isPrivate: Boolean): RemoteRepository
     abstract suspend fun getPullRequests(owner: String, repo: String, state: String = "open"): List<PullRequest>
 
-    // Issues API
+
     abstract suspend fun getIssues(
         owner: String,
         repo: String,
@@ -59,16 +59,22 @@ abstract class RemoteVcsProvider {
     abstract suspend fun addIssueComment(owner: String, repo: String, issueNumber: Int, body: String): IssueComment
     abstract suspend fun getIssueComments(owner: String, repo: String, issueNumber: Int): List<IssueComment>
 
-    // Branches API
+
     abstract suspend fun getBranches(owner: String, repo: String): List<GitBranch>
 
-    // Pull Request Commits
+
     abstract suspend fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): List<CommitSummary>
 
-    // Labels
+
     abstract suspend fun getLabels(owner: String, repo: String): List<Label>
 
     abstract fun getFileUrl(owner: String, repo: String, filePath: String, branch: String, lineNumber: Int? = null): String
     abstract fun getCloneUrl(owner: String, repo: String, useSsh: Boolean = false): String
     open fun isConfigured(): Boolean = false
+
+    /**
+     * Render markdown to HTML using the VCS platform's native renderer.
+     * Default returns the raw markdown (fallback for providers without a render API).
+     */
+    open suspend fun renderMarkdown(markdown: String, context: String? = null): String = markdown
 }

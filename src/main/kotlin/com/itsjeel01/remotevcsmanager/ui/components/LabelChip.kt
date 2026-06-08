@@ -1,9 +1,9 @@
 package com.itsjeel01.remotevcsmanager.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -27,7 +27,6 @@ private fun Color.textColor(): Color {
     return if (luminance > 140) Color.Black else Color.White
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun LabelChip(
     label: Label,
@@ -40,17 +39,25 @@ fun LabelChip(
     val chipColor = label.color.hexToColor()
     val textColor = chipColor.textColor()
 
+
+    val surfaceModifier = if (onToggle != null) {
+        modifier.clickable { onToggle() }
+    } else {
+        modifier
+    }
+
+
     Surface(
-        onClick = { onToggle?.invoke() },
         shape = RoundedCornerShape(4.dp),
         color = chipColor,
         border = if (selected) BorderStroke(2.dp, theme.Border.focused) else null,
-        modifier = modifier
+        modifier = surfaceModifier
     ) {
         Text(
             label.name,
             color = textColor,
             fontSize = fs.xsmall,
+
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }

@@ -1,15 +1,15 @@
 <!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.itsjeel01.remoteVcsManager</id>
-    <name>Remote VCS Manager</name>
+    <name>Anchor — Remote VCS</name>
     <version>1.0-SNAPSHOT</version>
     <vendor url="https://github.com/itsjeel01">itsjeel01</vendor>
 
-    <idea-version since-build="252.25557" />
+    <idea-version since-build="253" />
 
     <description><![CDATA[
-        <h2>Remote VCS Manager</h2>
-        <p>A plugin for managing remote version control systems directly from your JetBrains IDE.</p>
+        <h2>Anchor — Remote VCS for JetBrains</h2>
+        <p>Drop anchor. Stay in your IDE. Browse GitHub issues, pull requests, and branches without leaving your editor.</p>
         <h3>Features:</h3>
         <ul>
             <li>Browse your GitHub repositories</li>
@@ -39,6 +39,8 @@
 
     <!-- Product and plugin compatibility -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.jcef</depends>
+    <depends>Git4Idea</depends>
 
     <!-- Notification group -->
     <extensions defaultExtensionNs="com.intellij">
@@ -57,7 +59,7 @@
         <!-- Settings page under Tools -->
         <applicationConfigurable
                 id="remotevcsmanager.settings"
-                displayName="Remote VCS Manager"
+                displayName="Anchor — Remote VCS"
                 parentId="tools"
                 instance="com.itsjeel01.remotevcsmanager.settings.RemoteVcsConfigurable"/>
 
@@ -66,7 +68,7 @@
                 id="Remote VCS"
                 anchor="right"
                 secondary="true"
-                icon="/META-INF/pluginIcon.svg"
+                icon="/META-INF/toolWindow.svg"
                 factoryClass="com.itsjeel01.remotevcsmanager.ui.RemoteVcsToolWindowFactory"/>
 
         <!-- Startup activity -->

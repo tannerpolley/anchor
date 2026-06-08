@@ -15,10 +15,10 @@ class GitHubAuth {
          * Supported token formats for validation hints.
          */
         private val TOKEN_PATTERNS = listOf(
-            Regex("^ghp_[a-zA-Z0-9]{36}$"),      // GitHub PAT (classic)
-            Regex("^github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}$"), // Fine-grained PATs
-            Regex("^gho_[a-zA-Z0-9]{36}$"),       // Installation access token
-            Regex("^ghu_[a-zA-Z0-9]{36}$")        // User-to-server token
+            Regex("^ghp_[a-zA-Z0-9]{36}$"),       // GitHub PAT (classic)
+            Regex("^github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}$"),  // Fine-grained PATs
+            Regex("^gho_[a-zA-Z0-9]{36}$"),        // Installation access token
+            Regex("^ghu_[a-zA-Z0-9]{36}$")         // User-to-server token
         )
     }
 

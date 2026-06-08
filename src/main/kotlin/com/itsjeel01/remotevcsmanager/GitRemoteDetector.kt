@@ -13,7 +13,7 @@ import java.io.InputStreamReader
 class GitRemoteDetector(private val project: Project) {
 
     data class GitRemoteInfo(
-        val provider: String,          // "github", "gitlab", "bitbucket"
+        val provider: String,           // "github", "gitlab", "bitbucket"
         val owner: String,
         val repoName: String,
         val remoteName: String,
@@ -92,7 +92,7 @@ class GitRemoteDetector(private val project: Project) {
                     if (parts.size >= 2) {
                         val name = parts[0]
                         val url = parts[1]
-                        // Only add fetch URLs (not push)
+
                         if (!lines.any { it.first == name }) {
                             lines.add(name to url)
                         }
@@ -108,12 +108,8 @@ class GitRemoteDetector(private val project: Project) {
 
     private fun findGitRoot(): File? {
         val basePath = project.basePath ?: return null
-        var current = File(basePath)
-        while (current != null) {
-            if (File(current, ".git").exists()) return current
-            current = current.parentFile
-        }
-        return null
+        return generateSequence(File(basePath)) { it.parentFile }
+            .firstOrNull { File(it, ".git").exists() }
     }
 
     private fun gitCommand(gitRoot: File, vararg args: String): String? {
@@ -137,7 +133,7 @@ class GitRemoteDetector(private val project: Project) {
      * Supports: https, ssh, and git protocol URLs.
      */
     fun parseRemoteUrl(url: String): ParsedRemote? {
-        // HTTPS: https://github.com/owner/repo.git
+
         val httpsRegex = Regex("https?://([^/]+)/([^/]+)/([^/.]+)(?:\\.git)?$")
         httpsRegex.find(url)?.let {
             val domain = it.groupValues[1]
@@ -148,7 +144,7 @@ class GitRemoteDetector(private val project: Project) {
             )
         }
 
-        // SSH: git@github.com:owner/repo.git
+
         val sshRegex = Regex("git@([^:]+):([^/]+)/([^/.]+)(?:\\.git)?$")
         sshRegex.find(url)?.let {
             val domain = it.groupValues[1]
@@ -159,7 +155,7 @@ class GitRemoteDetector(private val project: Project) {
             )
         }
 
-        // git:// protocol
+
         val gitRegex = Regex("git://([^/]+)/([^/]+)/([^/.]+)(?:\\.git)?$")
         gitRegex.find(url)?.let {
             val domain = it.groupValues[1]
@@ -190,3 +186,4 @@ class GitRemoteDetector(private val project: Project) {
         }
     }
 }
+

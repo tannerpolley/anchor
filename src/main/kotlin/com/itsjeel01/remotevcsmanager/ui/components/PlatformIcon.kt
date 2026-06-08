@@ -28,8 +28,10 @@ fun PlatformIcon(
         g.dispose()
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)
-        val skiaImage = org.jetbrains.skia.Image.makeFromEncoded(baos.toByteArray())!!
-        BitmapPainter(skiaImage.toComposeImageBitmap())
+        val skiaImage = org.jetbrains.skia.Image.makeFromEncoded(baos.toByteArray())
+        skiaImage?.let { BitmapPainter(it.toComposeImageBitmap()) }
     }
-    Image(painter = painter, contentDescription = contentDescription, modifier = modifier)
+    if (painter != null) {
+        Image(painter = painter, contentDescription = contentDescription, modifier = modifier)
+    }
 }

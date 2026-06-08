@@ -44,7 +44,7 @@ class CloneRepositoryAction : AnAction(), DumbAware {
             return
         }
 
-        // Fetch repositories in background
+
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Fetching repositories...", true) {
             private var repos: List<RemoteRepository> = emptyList()
             private var error: String? = null
@@ -59,8 +59,9 @@ class CloneRepositoryAction : AnAction(), DumbAware {
             }
 
             override fun onSuccess() {
-                if (error != null) {
-                    PluginNotifications.error(project, "Failed to fetch repositories", error!!)
+                val err = error
+                if (err != null) {
+                    PluginNotifications.error(project, "Failed to fetch repositories", err)
                     return
                 }
 
@@ -95,11 +96,11 @@ class CloneRepositoryAction : AnAction(), DumbAware {
                 indicator.isIndeterminate = true
 
                 try {
-                    // Determine destination directory
+
                     val baseDir = File(project.basePath ?: System.getProperty("user.home"))
                     val cloneDir = File(baseDir, repo.name)
 
-                    // Run git clone
+
                     val process = ProcessBuilder(
                         "git", "clone", repo.cloneUrl, cloneDir.absolutePath
                     ).redirectErrorStream(true).start()
@@ -115,7 +116,7 @@ class CloneRepositoryAction : AnAction(), DumbAware {
                         throw Exception("git clone failed with exit code $exitCode")
                     }
 
-                    // Open the cloned project
+
                     com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
                         ProjectUtil.openOrImport(cloneDir.toPath())
                     }

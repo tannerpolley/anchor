@@ -35,7 +35,6 @@ class TextColors {
     val linkHover: Color = JBColor.namedColor("Link.hover.foreground", JBUI.CurrentTheme.Link.Foreground.HOVERED).toComposeColor()
     val selected: Color = JBColor.namedColor("Table.selection.foreground", UIUtil.getTableSelectionForeground(true)).toComposeColor()
     val error: Color = JBColor.namedColor("Notification.error.foreground", UIUtil.getErrorForeground()).toComposeColor()
-    val onAccent: Color = Color.White
 }
 
 class BorderColors {
@@ -46,7 +45,6 @@ class BorderColors {
 class ButtonColors {
     val background: Color = JBColor.namedColor("Button.default.startBackground", JBColor(0x448AFF, 0x448AFF)).toComposeColor()
     val foreground: Color = JBColor.namedColor("Button.default.foreground", JBColor(0xFFFFFF, 0xFFFFFF)).toComposeColor()
-    val focusedBackground: Color = JBColor.namedColor("Button.default.focusedBackground", JBColor(0x2675BF, 0x4374E0)).toComposeColor()
     val dangerBackground: Color = JBColor.namedColor("Button.danger.startBackground", JBColor(0xCF222E, 0xF85149)).toComposeColor()
     val dangerForeground: Color = JBColor.namedColor("Button.danger.foreground", JBColor(0xFFFFFF, 0xFFFFFF)).toComposeColor()
 }

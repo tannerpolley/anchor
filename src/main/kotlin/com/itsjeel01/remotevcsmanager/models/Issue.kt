@@ -5,13 +5,15 @@ package com.itsjeel01.remotevcsmanager.models
  */
 data class Label(
     val name: String,
-    val color: String  // hex color without #, e.g. "3FB950"
+    val color: String   // hex color without #, e.g. "3FB950"
 )
 
 data class CommitSummary(
     val sha: String,
     val message: String,
-    val url: String
+    val url: String,
+    val author: String?,
+    val createdAt: String?
 )
 
 data class Issue(

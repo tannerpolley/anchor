@@ -25,7 +25,7 @@ class RemoteVcsConfigurable : Configurable {
         p.setToken(currentToken)
         p.setAutoRefresh(settings.getAutoRefresh())
 
-        // Detect remote and set provider-aware links
+
         val project = ProjectManager.getInstance().openProjects.firstOrNull()
         var detectedProvider = "github"
         if (project != null) {
@@ -36,10 +36,10 @@ class RemoteVcsConfigurable : Configurable {
             p.updateRepoInfo(info?.owner, info?.repoName, info?.currentBranch, prov)
         }
 
-        // Connected? Show status
+
         if (currentToken.isNotEmpty()) {
             p.setTokenStatus("Token stored", true)
-            // Try to check if still valid
+
             val t = currentToken
             ProgressManager.getInstance().run(object : Task.Backgroundable(null, "Checking connection...", false) {
                 override fun run(indicator: ProgressIndicator) {
@@ -66,7 +66,7 @@ class RemoteVcsConfigurable : Configurable {
             })
         }
 
-        // Validate button callback
+
         p.setOnValidateToken {
             val token = p.getToken()
             if (token.isBlank()) { p.setTokenStatus("Enter a token", false); return@setOnValidateToken }
@@ -108,7 +108,7 @@ class RemoteVcsConfigurable : Configurable {
         val p = panel ?: return
         if (p.getToken().isNotBlank()) settings.setToken("github", p.getToken()) else settings.removeToken("github")
         settings.setAutoRefresh(p.getAutoRefresh())
-        // Notify tool window to reload after token change
+
         SettingsChangeNotifier.publish()
     }
 

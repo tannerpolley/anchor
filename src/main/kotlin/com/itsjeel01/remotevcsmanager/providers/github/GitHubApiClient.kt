@@ -7,6 +7,7 @@ import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
+import com.itsjeel01.remotevcsmanager.ui.VcsCache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -99,12 +100,13 @@ class GitHubApiClient(
     /**
      * Build an authenticated POST request with optional JSON body.
      */
-    private fun buildPostRequest(path: String, body: String? = null): Request {
+    private fun buildPostRequest(path: String, body: String? = null, customAccept: String? = null): Request {
+        val accept = customAccept ?: ACCEPT_HEADER
         val url = "$API_BASE_URL$path"
         val requestBody = body?.toRequestBody(JSON_MEDIA_TYPE)
         return Request.Builder()
             .url(url)
-            .addHeader("Accept", ACCEPT_HEADER)
+            .addHeader("Accept", accept)
             .addHeader("Authorization", auth.getAuthorizationHeader() ?: "")
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .post(requestBody ?: "".toRequestBody(JSON_MEDIA_TYPE))
@@ -181,7 +183,8 @@ class GitHubApiClient(
             val request = buildGetRequest("/user/repos?per_page=100&page=$page&sort=updated&type=all")
             val result = executeRequest(request)
             if (result.isFailure) {
-                return Result.failure(result.exceptionOrNull()!!)
+                val ex = result.exceptionOrNull()
+                return Result.failure(ex ?: Exception("Failed to fetch repositories"))
             }
             val body = result.getOrNull() ?: break
             val pageRepos = parseJson(body).asJsonArray
@@ -398,6 +401,65 @@ class GitHubApiClient(
         val encodedPath = filePath.replace(" ", "%20")
         val base = "$WEB_BASE_URL/$owner/$repo/blob/$branch/$encodedPath"
         return if (lineNumber != null) "$base#L$lineNumber" else base
+    }
+
+    /**
+     * Render markdown to HTML using GitHub's own renderer (GFM).
+     * This is the GitHub Flavored Markdown API — it produces the exact
+     * same HTML that GitHub displays for issues, comments, and READMEs.
+     *
+     * @param markdown raw markdown text
+     * @param context repo context for resolving @mentions, #issues, etc.
+     *        Format: "owner/repo"
+     */
+    fun renderMarkdown(markdown: String, context: String? = null): Result<String> {
+        val cacheKey = "md_${markdown.hashCode()}_${context.orEmpty()}"
+        val cached = com.itsjeel01.remotevcsmanager.ui.VcsCache.getMarkdown(cacheKey)
+        if (cached != null) return Result.success(cached)
+
+        val jsonBody = JsonObject().apply {
+            addProperty("text", markdown)
+            addProperty("mode", "gfm")
+            if (context != null) {
+                addProperty("context", context)
+            }
+        }
+        val request = buildPostRequest("/markdown", gson.toJson(jsonBody), "application/vnd.github+json")
+        val result = executeRequest(request)
+        if (result.isSuccess) {
+            VcsCache.putMarkdown(cacheKey, result.getOrThrow())
+        }
+        return result
+    }
+
+    /**
+     * Batch-render multiple markdown strings to HTML in a single API call.
+     * Far more efficient than calling renderMarkdown N times for a list of
+     * comments.
+     */
+    fun renderMarkdownBatch(
+        items: List<Pair<String, String?>>,
+        context: String? = null
+    ): Result<List<String>> {
+
+
+
+        val separator = "\n\n<!-- RVM_BATCH_SEPARATOR -->\n\n"
+        val combined = items.joinToString(separator) { (md, _) -> md }
+
+        val jsonBody = JsonObject().apply {
+            addProperty("text", combined)
+            addProperty("mode", "gfm")
+            if (context != null) {
+                addProperty("context", context)
+            }
+        }
+        val request = buildPostRequest("/markdown", gson.toJson(jsonBody), "application/vnd.github+json")
+        return executeRequest(request).map { body ->
+            body.split(Regex("<!-- RVM_BATCH_SEPARATOR -->"))
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+        }
     }
 
     /**
