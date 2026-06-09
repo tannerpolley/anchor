@@ -1,1 +1,1 @@
-rootProject.name = "remoteVcsManager"
+rootProject.name = "anchor"
