@@ -1,77 +1,98 @@
-# Anchor — Remote VCS for JetBrains
+<div align="center">
 
-**"Drop anchor. Stay in your IDE."**
+<!-- Replace with: docs/banner.svg — recommended size 1200×300, dark-mode safe -->
+<img src="assets/readme_banner.svg" width="100%" alt="Anchor — Remote VCS for JetBrains"/>
 
-Browse GitHub issues, pull requests, and branches without leaving your editor.
-Theme-aware rendering that matches your IDE — light or dark, it just works.
+<br/>
 
-## Features
+**Drop anchor. Manage remote repositories without leaving your editor.**
 
-- **Issues, PRs & Branches** — browse, filter, and manage all three with native IDE tool window
-- **GitHub-native rendering** — descriptions and comments render using GitHub's own markdown API, so they look exactly like they do on github.com
-- **Timeline view** — PR commits appear inline in a chronological timeline with author and timestamp
-- **Theme-aware** — all HTML content adapts to your active IDE theme. Switch from light to dark and every element follows
-- **Single-click checkout** — switch branches from the tool window using IntelliJ's native git infrastructure
-- **Create issues** — full form with label chips, assignee field, and markdown description
-- **Open on GitHub** — right-click any file to view it on GitHub at the current line
+[![Version](https://img.shields.io/badge/version-1.0.0--beta.1-2563EB?style=flat-square)](https://github.com/itsjeel01/anchor-vcs/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+
+[Install](#installation) · [Screenshots](#screenshots) · [Report a Bug](../../issues/new?template=bug_report.yml) · [Request a Feature](../../issues/new?template=feature_request.yml)
+
+</div>
+
+---
+
+## Overview
+
+Anchor is a JetBrains plugin that brings your remote Git repository workflow into the IDE as a native tool window. View issues, pull requests, and branches; read descriptions; post comments; and jump to browser when you need to — all without leaving the editor.
+
+---
 
 ## Installation
 
-### From JetBrains Marketplace
-1. Open your IDE → **Settings** → **Plugins** → **Marketplace**
-2. Search for **"Anchor — Remote VCS"**
-3. Click **Install**
-4. Set up a GitHub personal access token in **Settings** → **Tools** → **Anchor — Remote VCS**
+### JetBrains Marketplace (recommended)
 
-### Manual installation
-```bash
-git clone https://github.com/itsjeel01/remoteVcsManager.git
-cd remoteVcsManager
-./gradlew buildPlugin
-# Install from build/distributions/ via Settings → Plugins → ⚙ → Install from Disk
+1. Open **Settings → Plugins → Marketplace**
+2. Search **"Anchor"**
+3. Click **Install**, then restart the IDE
+4. The **Anchor** tool window appears in the right sidebar
+
+### From disk
+
+```
+Settings → Plugins → ⚙ → Install Plugin from Disk → select anchor-*.zip
 ```
 
-## Usage
+Beta builds are attached to each [GitHub release](../../releases).
 
-1. Open a project with a GitHub remote configured
-2. Open the **Remote VCS** tool window (right sidebar)
-3. If this is your first time, set your GitHub PAT in **Settings → Tools → Anchor — Remote VCS**
-4. The tool window will auto-detect your remote and load all issues, PRs, and branches
+### First-time setup
 
-**Keyboard shortcuts** (when focused in the tool window):
-- `R` — refresh data
-- `Esc` — go back from detail view
+1. Open **Settings → Tools → Anchor - Remote VCS**
+2. Generate & validate authentication token in just a few clicks
+4. Open the **Anchor** tool window — your repository is auto-detected from the git remote
+
+---
+
+## Screenshots
+
+<!-- Replace each src with the actual screenshot path under docs/screenshots/ -->
+
+| Issues panel | Pull Requests panel |
+|---|---|
+| <img src="assets/issues.png"/> <br/> filter bar (Open / Closed / All), state badges, metadata | <img src="assets/prs.png"/> <br/> Open / Merged / Closed states, source → target branch |
+
+| PR detail | Issue detail |
+|---|---|
+| <img src="assets/pr-detail.png"/> <br/> commit list, clickable SHAs, branch metadata | <img src="assets/issue-detail.png"/> <br/>  GitHub Flavored Markdown, embedded images |
+
+> Screenshots from Android Studio on macOS. Appearance is identical across all JetBrains IDEs.
+
+---
+
+## Supported IDEs
+
+Any IntelliJ-platform IDE at build 253 or later.
+
+| IDE | Status |
+|---|---|
+| Android Studio | ✅ |
+| IntelliJ IDEA (Community & Ultimate) | ✅ |
+| WebStorm | ✅ |
+| PyCharm | ✅ |
+| GoLand | ✅ |
+| All other JetBrains IDEs | ✅ |
+
+---
 
 ## Contributing
 
-Issues, PRs, and ideas are welcome — this is an early-stage project and your input shapes it.
+Bug reports and feature requests go in [GitHub Issues](../../issues). Pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
-- **Found a bug?** [Open an issue](../../issues/new?template=bug_report.md)
-- **Have a feature request?** [Open an issue](../../issues/new?template=feature_request.md)
-- **Want to contribute code?** Fork, branch, and PR — see conventions below
+```bash
+git clone https://github.com/itsjeel01/anchor.git
+cd anchor-vcs
+./gradlew runIde          # launch a sandboxed IDE with Anchor loaded
+./gradlew buildPlugin     # → build/distributions/anchor-*.zip
+./gradlew verifyPlugin    # validate plugin.xml and IDE compatibility
+```
 
-### Commit conventions
-- `feat:` — new features
-- `fix:` — bug fixes
-- `chore:` — build, deps, cleanup
-- `docs:` — documentation
-- `refactor:` — code restructuring
-- Commits should be atomic — one logical change per commit
-
-### Branch conventions
-- `main` — stable, release-ready
-- `develop` — integration branch for features
-- `feat/*` — feature branches (e.g., `feat/gitlab-support`)
-- `fix/*` — bug fix branches
-- Branch from `develop`, PR back to `develop`
-
-## Tech stack
-
-- Kotlin + Compose Multiplatform for UI
-- Chromium Embedded Framework (JCEF) for HTML rendering
-- GitHub REST API v3 + GFM markdown rendering
-- OkHttp for networking, Gson for JSON parsing
+---
 
 ## License
 
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+MIT © [Jeel Patel](https://github.com/alph-a07)
