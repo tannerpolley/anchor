@@ -2,7 +2,15 @@
   <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Anchor — Remote VCS for JetBrains banner</title>
   <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Banner showing the Anchor plugin with a 38x stat on the left and a tool window mockup on the right, on a dark background.</desc>
 
-  <rect width="1200" height="420" fill="#0E0E10" rx="12" style="fill:rgb(14, 14, 16);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect width="1200" height="420" fill="#0E0E10" rx="12" filter="url(#card-shadow)" style="fill:rgb(14, 14, 16);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Drop shadow filter — visible on both dark and light GitHub backgrounds -->
+  <defs>
+    <filter id="card-shadow" x="-4%" y="-4%" width="108%" height="116%">
+      <feDropShadow dx="0" dy="4" stdDeviation="16" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
 
   <!-- Animated blob -->
   <defs>
@@ -31,19 +39,20 @@
   </defs>
   <defs>
     <linearGradient id="topbar-color" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#06B6D4"/>
-      <stop offset="20%" stop-color="#3B82F6"/>
-      <stop offset="40%" stop-color="#8B5CF6"/>
-      <stop offset="60%" stop-color="#EC4899"/>
-      <stop offset="78%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+      <stop offset="0%"   stop-color="#06B6D4" stop-opacity="0"/>
+      <stop offset="8%"   stop-color="#06B6D4" stop-opacity="0.9"/>
+      <stop offset="25%"  stop-color="#3B82F6"/>
+      <stop offset="42%"  stop-color="#8B5CF6"/>
+      <stop offset="58%"  stop-color="#EC4899"/>
+      <stop offset="75%"  stop-color="#6366F1"/>
+      <stop offset="92%"  stop-color="#06B6D4" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
     </linearGradient>
-    <!-- Mask that makes the bar wide at center, invisible at both ends -->
     <mask id="topbar-mask">
-      <ellipse cx="600" cy="0" rx="560" ry="5" fill="white"/>
+      <ellipse cx="600" cy="0" rx="600" ry="4" fill="white"/>
     </mask>
   </defs>
-  <rect x="0" y="-2" width="1200" height="7" fill="url(#topbar-color)" mask="url(#topbar-mask)"/>
+  <rect x="0" y="-1" width="1200" height="6" fill="url(#topbar-color)" mask="url(#topbar-mask)"/>
 
   <!-- Breadcrumb -->
   <text x="96" y="58" font-family="'SF Mono', 'Fira Code', monospace" font-size="13" fill="#555560" letter-spacing="0.08em" style="fill:rgb(85, 85, 96);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;SF Mono&quot;, &quot;Fira Code&quot;, monospace;font-size:13px;font-weight:400;text-anchor:start;dominant-baseline:auto">ITSJEEL01</text>
@@ -62,18 +71,21 @@
   <text x="90" y="320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" fill="#FFFFFF" font-weight="600" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:-apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:18px;font-weight:600;text-anchor:start;dominant-baseline:auto">That number should be zero.</text>
 
   <!-- CTA row -->
-  <!-- Icon pill — exact pluginIcon geometry, translated to position -->
-  <rect x="90" y="356" width="40" height="40" rx="9" fill="#2563EB"/>
-  <g transform="translate(90,356)">
-    <circle cx="20" cy="11.5" r="4" stroke="#FFFFFF" stroke-width="1.6" fill="none"/>
-    <line x1="20" y1="15.5" x2="20" y2="21" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
-    <line x1="20" y1="21" x2="12" y2="27.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
-    <line x1="20" y1="21" x2="28" y2="27.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
-    <circle cx="12" cy="30" r="2.8" fill="#FFFFFF"/>
-    <circle cx="28" cy="30" r="2.8" fill="#FFFFFF"/>
+  <!-- Icon pill — exact pluginIcon geometry, scaled to fill square -->
+  <rect x="90" y="348" width="40" height="40" rx="9" fill="#2563EB"/>
+  <g transform="translate(90,348)">
+    <!-- scaleX 1.25 around cx=20 to widen the anchor shape -->
+    <g transform="translate(20,0) scale(1.25,1) translate(-20,0)">
+      <circle cx="20" cy="11.5" r="4" stroke="#FFFFFF" stroke-width="1.6" fill="none"/>
+      <line x1="20" y1="15.5" x2="20" y2="21" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="20" y1="21" x2="12" y2="27.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="20" y1="21" x2="28" y2="27.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="12" cy="30" r="2.8" fill="#FFFFFF"/>
+      <circle cx="28" cy="30" r="2.8" fill="#FFFFFF"/>
+    </g>
   </g>
-  <text x="142" y="381" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#2563EB" font-weight="600" font-style="italic" style="fill:rgb(37,99,235);stroke:none;color:rgb(255,255,255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:-apple-system,&quot;system-ui&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:22px;font-weight:600;text-anchor:start;dominant-baseline:auto">Anchor</text>
-  <text x="230" y="381" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#9999A8" font-weight="400" style="fill:rgb(153, 153, 168);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:-apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:22px;font-weight:400;text-anchor:start;dominant-baseline:auto"> for JetBrains · free</text>
+  <text x="142" y="373" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#2563EB" font-weight="600" style="fill:rgb(37,99,235);stroke:none;color:rgb(255,255,255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:-apple-system,&quot;system-ui&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:22px;font-weight:600;text-anchor:start;dominant-baseline:auto">Anchor</text>
+  <text x="230" y="373" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#9999A8" font-weight="400" style="fill:rgb(153, 153, 168);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:-apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:22px;font-weight:400;text-anchor:start;dominant-baseline:auto"> for JetBrains · Free</text>
 
   <!-- ───── Tool window mockup ───── -->
   <!-- Window card -->
