@@ -1,116 +1,112 @@
 <!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.itsjeel01.remoteVcsManager</id>
-    <name>Anchor — Remote VCS</name>
-    <version>1.0.0-beta.1</version>
-    <vendor url="https://github.com/alph-a07">alph-a07</vendor>
-
-    <idea-version since-build="253" />
+    <name>Anchor - Remote VCS</name>
+    <vendor email="itsjeel01@gmail.com" url="https://github.com/alph-a07">Jeel Patel</vendor>
 
     <description><![CDATA[
-        <h2>Anchor — Remote VCS for JetBrains</h2>
-        <p>Drop anchor. Stay in your IDE. Browse GitHub issues, pull requests, and branches without leaving your editor.</p>
-        <h3>Features:</h3>
+        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/readme_banner.svg" width="100%" alt="Anchor - Remote VCS for JetBrains"/>
+
+        <p>
+            The average developer leaves their IDE for GitHub <strong>38 times a day</strong>.
+            Anchor brings your remote repository workflow into a native tool window so that number is zero.
+        </p>
+
+        <h3>What you can do</h3>
         <ul>
-            <li>Browse your GitHub repositories</li>
-            <li>Clone repositories from remote providers</li>
-            <li>Create new repositories on GitHub</li>
-            <li>Open files on GitHub with one click</li>
-            <li>Add GitHub repositories as remotes</li>
-            <li>View pull requests for your repositories</li>
+            <li>Browse <strong>Issues</strong> and <strong>Pull Requests</strong> with filter, state badges, and metadata</li>
+            <li>Read full descriptions rendered as GitHub Flavored Markdown - embedded images included</li>
+            <li>Post comments without opening a browser tab</li>
+            <li>Inspect PR commits with clickable SHAs and source → target branch info</li>
+            <li>View and switch <strong>Branches</strong> from the same panel</li>
+            <li>Open any item in the browser when you need the full GitHub UI</li>
+            <li>Clone repositories, create new ones, and add GitHub remotes via the VCS menu</li>
+            <li>Open the current file on GitHub from the editor context menu</li>
         </ul>
-        <p>Initially supports GitHub, designed to be extensible for other providers.</p>
+
+        <h3>Screenshots</h3>
+        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/issues.png" width="49%" alt="Issues panel"/>
+        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/prs.png" width="49%" alt="Pull Requests panel"/>
         <br/>
-        <em>Compatible with Android Studio and all JetBrains IDEs</em>
+        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/issue-detail.png" width="49%" alt="Issue detail"/>
+        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/pr-detail.png" width="49%" alt="PR detail"/>
+
+        <h3>Setup</h3>
+        <ol>
+            <li>Go to <strong>Settings → Tools → Anchor - Remote VCS</strong></li>
+            <li>Generate and validate a GitHub token in a few clicks</li>
+            <li>Open the <strong>Anchor</strong> tool window - your repository is auto-detected from the git remote</li>
+        </ol>
+
+        <p>
+            Compatible with Android Studio and all IntelliJ-platform IDEs at build 253 or later.<br/>
+            <a href="https://github.com/alph-a07/anchor">GitHub</a> ·
+            <a href="https://github.com/alph-a07/anchor/issues">Report a bug</a> ·
+            MIT License
+        </p>
     ]]></description>
 
-    <change-notes><![CDATA[
-        <b>1.0-SNAPSHOT</b>
-        <ul>
-            <li>Initial release</li>
-            <li>GitHub integration with PAT authentication</li>
-            <li>Browse and clone repositories</li>
-            <li>Create new repositories</li>
-            <li>Open files on GitHub</li>
-            <li>Add remote repositories to projects</li>
-            <li>Settings page for token management</li>
-        </ul>
-    ]]></change-notes>
-
-    <!-- Product and plugin compatibility -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.jcef</depends>
     <depends>Git4Idea</depends>
 
-    <!-- Notification group -->
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Notification group for plugin notifications -->
         <notificationGroup
-                id="Remote VCS Manager"
-                displayType="BALLOON"
-                key="Remote VCS Manager"/>
+                id="Anchor"
+                displayType="BALLOON"/>
 
-        <!-- Settings persistence -->
-        <!-- Settings persistence -->
         <applicationService
                 serviceImplementation="com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState"/>
 
-        <!-- Settings page under Tools -->
-        <!-- Settings page under Tools -->
         <applicationConfigurable
-                id="remotevcsmanager.settings"
-                displayName="Anchor — Remote VCS"
+                id="com.itsjeel01.remoteVcsManager.settings"
+                displayName="Anchor - Remote VCS"
                 parentId="tools"
                 instance="com.itsjeel01.remotevcsmanager.settings.RemoteVcsConfigurable"/>
 
-        <!-- Tool window -->
         <toolWindow
-                id="Remote VCS"
+                id="Anchor"
                 anchor="right"
-                secondary="true"
                 icon="/META-INF/toolWindow.svg"
                 factoryClass="com.itsjeel01.remotevcsmanager.ui.RemoteVcsToolWindowFactory"/>
 
-        <!-- Startup activity -->
         <postStartupActivity
                 implementation="com.itsjeel01.remotevcsmanager.RemoteVcsManagerProjectActivity"/>
     </extensions>
 
-    <!-- Actions -->
     <actions>
-        <!-- Editor popup action: Open on GitHub -->
         <action
-                id="RemoteVcsManager.OpenOnRemote"
+                id="com.itsjeel01.remoteVcsManager.OpenOnRemote"
                 class="com.itsjeel01.remotevcsmanager.actions.OpenOnRemoteAction"
                 text="Open on GitHub"
-                description="Open current file on GitHub"
+                description="Open the current file on GitHub"
                 icon="/icons/openInBrowser.svg">
             <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CopyPaths"/>
         </action>
 
-        <!-- VCS menu actions group -->
-        <group id="RemoteVcsManager.ActionsGroup"
-               text="Anchor"
-               description="Remote VCS Manager actions"
-               popup="true">
+        <group
+                id="com.itsjeel01.remoteVcsManager.ActionsGroup"
+                text="Anchor"
+                description="Anchor - Remote VCS actions"
+                popup="true">
             <add-to-group group-id="VcsGroups" anchor="last"/>
 
             <action
-                    id="RemoteVcsManager.CloneRepository"
+                    id="com.itsjeel01.remoteVcsManager.CloneRepository"
                     class="com.itsjeel01.remotevcsmanager.actions.CloneRepositoryAction"
                     text="Clone Repository..."
                     description="Clone a remote repository"
                     icon="/icons/clone.svg"/>
 
             <action
-                    id="RemoteVcsManager.CreateRepository"
+                    id="com.itsjeel01.remoteVcsManager.CreateRepository"
                     class="com.itsjeel01.remotevcsmanager.actions.CreateRepositoryAction"
                     text="Create Repository on GitHub..."
                     description="Create a new repository on GitHub"
                     icon="/icons/create.svg"/>
 
             <action
-                    id="RemoteVcsManager.AddRemote"
+                    id="com.itsjeel01.remoteVcsManager.AddRemote"
                     class="com.itsjeel01.remotevcsmanager.actions.AddRemoteAction"
                     text="Add Remote from GitHub..."
                     description="Add a GitHub repository as a remote to this project"
