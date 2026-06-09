@@ -27,6 +27,7 @@ import com.itsjeel01.remotevcsmanager.ui.theme.LocalPlatformFonts
 import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 import kotlinx.coroutines.*
 import kotlin.concurrent.thread
+import javax.swing.SwingUtilities
 
 @Composable
 fun PullRequestDetailContent(
@@ -40,10 +41,22 @@ fun PullRequestDetailContent(
     var commentText by remember { mutableStateOf("") }
 
     LaunchedEffect(pr.number) {
-        withContext(Dispatchers.IO) {
-            try { comments = provider.getIssueComments(owner, repo, pr.number) } catch (_: Exception) { }
-            try { commits = provider.getPullRequestCommits(owner, repo, pr.number) } catch (_: Exception) { }
+        val loadedComments = withContext(Dispatchers.IO) {
+            try {
+                provider.getIssueComments(owner, repo, pr.number)
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
+        val loadedCommits = withContext(Dispatchers.IO) {
+            try {
+                provider.getPullRequestCommits(owner, repo, pr.number)
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        comments = loadedComments
+        commits = loadedCommits
     }
 
     Column(
@@ -68,7 +81,8 @@ fun PullRequestDetailContent(
                 bg({ provider.addIssueComment(owner, repo, pr.number, t) }) {
                     thread {
                         try {
-                            comments = runBlocking { provider.getIssueComments(owner, repo, pr.number) }
+                            val updatedComments = runBlocking { provider.getIssueComments(owner, repo, pr.number) }
+                            SwingUtilities.invokeLater { comments = updatedComments }
                         } catch (_: Exception) { }
                     }
                 }

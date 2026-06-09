@@ -51,9 +51,14 @@ fun IssueDetailContent(
     var commentText by remember { mutableStateOf("") }
 
     LaunchedEffect(issue.number) {
-        withContext(Dispatchers.IO) {
-            try { comments = provider.getIssueComments(owner, repo, issue.number) } catch (_: Exception) { }
+        val loadedComments = withContext(Dispatchers.IO) {
+            try {
+                provider.getIssueComments(owner, repo, issue.number)
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
+        comments = loadedComments
     }
 
     Column(
@@ -74,8 +79,10 @@ fun IssueDetailContent(
                 val t = commentText; commentText = ""
                 bg({ provider.addIssueComment(owner, repo, issue.number, t) }) {
                     thread {
-                        try { comments = runBlocking { provider.getIssueComments(owner, repo, issue.number) } }
-                        catch (_: Exception) { }
+                        try {
+                            val updatedComments = runBlocking { provider.getIssueComments(owner, repo, issue.number) }
+                            SwingUtilities.invokeLater { comments = updatedComments }
+                        } catch (_: Exception) { }
                     }
                 }
             }

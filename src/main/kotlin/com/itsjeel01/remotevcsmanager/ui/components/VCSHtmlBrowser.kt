@@ -60,7 +60,7 @@ fun VCSHtmlBrowser(
     enableSanitization: Boolean = true
 ) {
     val themeColors = LocalThemeColors.current
-    val platformFonts = LocalPlatformFonts.current
+    val themeVersion by com.itsjeel01.remotevcsmanager.ui.theme.IdeEvents.theme.collectAsState()
 
 
     val content = rawHtml?.trim()
@@ -99,10 +99,7 @@ fun VCSHtmlBrowser(
     }
 
 
-    val isBright = JBColor.isBright()
-
-
-    LaunchedEffect(browser, sanitized, isBright) {
+    LaunchedEffect(browser, sanitized, themeVersion) {
         val b = browser ?: return@LaunchedEffect
         try {
             b.loadHTML(buildThemedPage(sanitized))
@@ -136,7 +133,12 @@ fun VCSHtmlBrowser(
                     verticalTextPosition = javax.swing.SwingConstants.TOP
                 }
         },
-        update = {                                                 }
+        update = { component ->
+            if (component is javax.swing.JLabel) {
+                component.foreground = JBColor.foreground()
+                component.background = JBColor.PanelBackground
+            }
+        }
     )
 }
 

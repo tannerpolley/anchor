@@ -35,10 +35,6 @@ import kotlinx.coroutines.withContext
 
 private val LOG = Logger.getInstance("VcsDetailHtmlRenderer")
 
-
-
-
-
 /**
  * Renders VCS description + comments in a **single** JCEF browser instance.
  *
@@ -94,8 +90,19 @@ fun VcsDetailHtmlRenderer(
 
 
 
+    val themeVersion by com.itsjeel01.remotevcsmanager.ui.theme.IdeEvents.theme.collectAsState()
+
+    // Separate theme-only reload: when theme changes but data hasn't,
+    // just re-apply the HTML with new theme colors — no loading flash.
+    LaunchedEffect(themeVersion, browser) {
+        val currentBrowser = browser ?: return@LaunchedEffect
+        if (hasEverLoaded) {
+            loadHtml(currentBrowser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
+        }
+    }
 
     LaunchedEffect(description, comments, commits, context, browser) {
+        val currentBrowser = browser ?: return@LaunchedEffect
         isLoading = true
         loadingPhase = "Rendering description…"
         loadingDetail = null
@@ -113,10 +120,10 @@ fun VcsDetailHtmlRenderer(
                     }
                 }
                 descriptionHtml = html
-                loadHtml(browser, descriptionHtml, emptyList(), comments, emptyList(), commits)
+                loadHtml(currentBrowser, descriptionHtml, emptyList(), comments, emptyList(), commits)
             } else {
                 descriptionHtml = null
-                loadHtml(browser, null, emptyList(), comments, emptyList(), commits)
+                loadHtml(currentBrowser, null, emptyList(), comments, emptyList(), commits)
             }
             isLoading = false
             hasEverLoaded = true
@@ -133,7 +140,7 @@ fun VcsDetailHtmlRenderer(
                     }
                     rendered[i] = html
                     commentHtmls = rendered.toList()
-                    loadHtml(browser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
+                    loadHtml(currentBrowser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
                 }
                 loadingDetail = null
             }
@@ -144,7 +151,7 @@ fun VcsDetailHtmlRenderer(
                 for (i in commits.indices) {
                     rendered[i] = commits[i].message
                     commitHtmls = rendered.toList()
-                    loadHtml(browser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
+                    loadHtml(currentBrowser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
                 }
             }
         } catch (e: Exception) {
@@ -154,13 +161,6 @@ fun VcsDetailHtmlRenderer(
             isLoading = false
         }
         loadingPhase = ""
-    }
-
-    val isBright = JBColor.isBright()
-    LaunchedEffect(isBright) {
-        if (browser != null && (descriptionHtml != null || commentHtmls.isNotEmpty() || commitHtmls.isNotEmpty())) {
-            loadHtml(browser, descriptionHtml, commentHtmls, comments, commitHtmls, commits)
-        }
     }
 
 
@@ -193,6 +193,12 @@ fun VcsDetailHtmlRenderer(
                                 verticalAlignment = javax.swing.SwingConstants.TOP
                                 verticalTextPosition = javax.swing.SwingConstants.TOP
                             }
+                    },
+                    update = { component ->
+                        if (component is javax.swing.JLabel) {
+                            component.foreground = JBColor.foreground()
+                            component.background = JBColor.PanelBackground
+                        }
                     }
                 )
             } else {
@@ -228,10 +234,6 @@ fun VcsDetailHtmlRenderer(
         }
     }
 }
-
-
-
-
 
 /**
  * Build the full themed HTML document from description + comment bubbles
@@ -326,10 +328,6 @@ private fun loadHtml(
         LOG.warn("Failed to load HTML into JCEF", e)
     }
 }
-
-
-
-
 
 private fun buildThemedPage(bodyHtml: String): String {
     val bg = ColorUtil.toHtmlColor(JBColor.PanelBackground)
