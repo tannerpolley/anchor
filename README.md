@@ -15,13 +15,9 @@
 
 </div>
 
----
-
 ## Overview
 
 Anchor is a JetBrains plugin that brings your remote Git repository workflow into the IDE as a native tool window. View issues, pull requests, and branches; read descriptions; post comments; and jump to browser when you need to — all without leaving the editor.
-
----
 
 ## Installation
 
@@ -38,15 +34,13 @@ Anchor is a JetBrains plugin that brings your remote Git repository workflow int
 Settings → Plugins → ⚙ → Install Plugin from Disk → select anchor-*.zip
 ```
 
-Beta builds are attached to each [GitHub release](../../releases).
+All builds are available in [GitHub release](../../releases).
 
 ### First-time setup
 
 1. Open **Settings → Tools → Anchor - Remote VCS**
 2. Generate & validate authentication token in just a few clicks
 4. Open the **Anchor** tool window — your repository is auto-detected from the git remote
-
----
 
 ## Screenshots
 
@@ -62,8 +56,6 @@ Beta builds are attached to each [GitHub release](../../releases).
 
 > Screenshots from Android Studio on macOS. Appearance is identical across all JetBrains IDEs.
 
----
-
 ## Supported IDEs
 
 Any IntelliJ-platform IDE at build 253 or later.
@@ -77,21 +69,17 @@ Any IntelliJ-platform IDE at build 253 or later.
 | GoLand | ✅ |
 | All other JetBrains IDEs | ✅ |
 
----
-
 ## Contributing
 
 Bug reports and feature requests go in [GitHub Issues](../../issues). Pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ```bash
 git clone https://github.com/itsjeel01/anchor.git
-cd anchor-vcs
+cd anchor
 ./gradlew runIde          # launch a sandboxed IDE with Anchor loaded
 ./gradlew buildPlugin     # → build/distributions/anchor-*.zip
 ./gradlew verifyPlugin    # validate plugin.xml and IDE compatibility
 ```
-
----
 
 ## License
 
