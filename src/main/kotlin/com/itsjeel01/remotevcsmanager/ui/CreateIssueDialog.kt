@@ -12,11 +12,7 @@ import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.application.ApplicationManager
 import com.itsjeel01.remotevcsmanager.models.Label as VsLabel
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
@@ -66,8 +62,10 @@ class CreateIssueDialog(
             try {
                 val labels = runBlocking { provider.getLabels(owner, repo) }
                 VcsCache.putApi("labels_${owner}_$repo", labels)
-                repoLabels = labels
-                javax.swing.SwingUtilities.invokeAndWait { pack() }
+                javax.swing.SwingUtilities.invokeLater {
+                    repoLabels = labels
+                    pack()
+                }
             } catch (_: Exception) { }
         }
     }
