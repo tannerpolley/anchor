@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest something for Anchor
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests go a long way. Specific, workflow-grounded requests get prioritised.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this relate to?
+      options:
+        - Issues
+        - Pull Requests
+        - Branches
+        - Comments
+        - Create issue / PR flow
+        - Authentication
+        - UI / theme
+        - New VCS provider (GitLab, ADO, etc.)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the current pain?
+      description: Describe the workflow friction this would fix. "I'm always having to..." is a great way to frame it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you want instead?
+      description: Describe the feature. Sketches, mockups, or just words — all useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you've tried in the meantime?
+      description: Workarounds, other tools, etc.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Quick check
+      options:
+        - label: I searched existing issues and this hasn't been requested before
+          required: true

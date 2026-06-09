@@ -1,0 +1,75 @@
+name: Bug report
+description: Something isn't working right
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The more specific you are, the faster this gets fixed.
+
+  - type: input
+    id: ide
+    attributes:
+      label: IDE and version
+      description: e.g. Android Studio Meerkat 2024.3.2, IntelliJ IDEA 2025.1
+      placeholder: Android Studio Meerkat 2024.3.2
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Anchor plugin version
+      placeholder: 1.0.0-beta.1
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 15.2 / Windows 11 / Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the plugin is affected?
+      options:
+        - Issues list or detail
+        - Pull Requests list or detail
+        - Branches
+        - Comments
+        - Authentication / Settings
+        - Markdown rendering
+        - Tool window (loading, display)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what you did, what you expected, and what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Issues tab
+        2. Click on issue #...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output (optional)
+      description: From Help → Show Log in Finder/Explorer. Search for "RemoteVCS" or "Anchor".
+      render: text
