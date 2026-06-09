@@ -264,9 +264,6 @@ fun StatusBar(state: ToolWindowState) {
 
 @Composable
 fun IssuesPanel(state: ToolWindowState) {
-    val theme = LocalThemeColors.current
-    val fs = LocalPlatformFonts.current
-
     FilterChipRow(
         mapOf("open" to "Open", "closed" to "Closed", "all" to "All"),
         state.issueFilterState
@@ -321,15 +318,12 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
             )
         }
 
-        Divider(color = theme.divider, thickness = 0.5.dp)
+        Divider(color = theme.divider, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
     }
 }
 
 @Composable
 fun PRsPanel(state: ToolWindowState) {
-    val theme = LocalThemeColors.current
-    val fs = LocalPlatformFonts.current
-
     FilterChipRow(
         mapOf("open" to "Open", "merged" to "Merged", "closed" to "Closed", "all" to "All"),
         state.prFilterState
@@ -385,7 +379,7 @@ fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
             )
         }
 
-        Divider(color = theme.divider, thickness = 0.5.dp)
+        Divider(color = theme.divider, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
     }
 }
 

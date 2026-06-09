@@ -1,9 +1,7 @@
 package com.itsjeel01.remotevcsmanager.ui.components
 
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -34,9 +32,6 @@ fun BranchPill(branchName: String, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⑂", fontSize = fs.xsmall, color = theme.Text.secondary)
-            Spacer(Modifier.width(4.dp))
-
             Text(
                 text = branchName,
                 fontSize = fs.mono,

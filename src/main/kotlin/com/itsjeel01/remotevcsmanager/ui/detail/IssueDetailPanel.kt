@@ -2,12 +2,10 @@ package com.itsjeel01.remotevcsmanager.ui.detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,7 +22,6 @@ import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.components.ButtonVariant
 import com.itsjeel01.remotevcsmanager.ui.components.CompactButton
-import com.itsjeel01.remotevcsmanager.ui.components.PlatformIcon
 import com.itsjeel01.remotevcsmanager.ui.components.LabelChip
 import com.itsjeel01.remotevcsmanager.ui.components.StateBadgeForIssue
 import com.itsjeel01.remotevcsmanager.ui.components.ClickableIcon
@@ -34,8 +31,6 @@ import com.itsjeel01.remotevcsmanager.ui.theme.LocalThemeColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.*
 import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 import kotlin.concurrent.thread
@@ -46,7 +41,6 @@ fun IssueDetailContent(
     onBack: () -> Unit, onRefresh: () -> Unit, onStateToggle: (IssueState) -> Unit
 ) {
     val theme = LocalThemeColors.current
-    val fs = LocalPlatformFonts.current
     var comments by remember { mutableStateOf<List<IssueComment>>(emptyList()) }
     var commentText by remember { mutableStateOf("") }
 

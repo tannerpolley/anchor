@@ -88,8 +88,6 @@ fun VcsDetailHtmlRenderer(
         }
     }
 
-
-
     val themeVersion by com.itsjeel01.remotevcsmanager.ui.theme.IdeEvents.theme.collectAsState()
 
     // Separate theme-only reload: when theme changes but data hasn't,
@@ -633,10 +631,6 @@ private fun buildThemedPage(bodyHtml: String): String {
         </html>
     """.trimIndent()
 }
-
-
-
-
 
 private fun String.escapeHtml(): String =
     this.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
