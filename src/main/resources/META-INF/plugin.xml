@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>com.itsjeel01.remoteVcsManager</id>
     <name>Anchor — Remote VCS</name>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-beta.1</version>
     <vendor url="https://github.com/alph-a07">alph-a07</vendor>
 
     <idea-version since-build="253" />
@@ -90,7 +90,7 @@
 
         <!-- VCS menu actions group -->
         <group id="RemoteVcsManager.ActionsGroup"
-               text="Remote VCS"
+               text="Anchor"
                description="Remote VCS Manager actions"
                popup="true">
             <add-to-group group-id="VcsGroups" anchor="last"/>
