@@ -17,6 +17,7 @@ import com.itsjeel01.remotevcsmanager.settings.SettingsChangeNotifier
 import kotlinx.coroutines.runBlocking
 import javax.swing.SwingUtilities
 import kotlin.concurrent.thread
+import java.util.concurrent.atomic.AtomicInteger
 
 sealed class Screen { data object List : Screen(); data object Detail : Screen() }
 
@@ -61,6 +62,11 @@ class ToolWindowState(project: Project) {
     var activeTab by mutableStateOf(0)
     var gitRoot by mutableStateOf<java.io.File?>(null)
 
+    /** Incremented before each [refresh] call. Background threads check this
+     *  to discard stale responses when rapid refreshes occur (e.g., during
+     *  theme-change recomposition storms). */
+    private val generation = AtomicInteger(0)
+
     init {
         reloadConfig()
         ApplicationManager.getApplication().messageBus.connect().subscribe(
@@ -91,6 +97,7 @@ class ToolWindowState(project: Project) {
 
     fun refreshIssues() {
         val o = remoteOwner ?: return; val r = remoteRepo ?: return
+        val gen = generation.incrementAndGet()
         statusText = "Refreshing issues…"
         thread {
             try {
@@ -98,6 +105,7 @@ class ToolWindowState(project: Project) {
                 val closed = runBlocking { provider.getIssues(o, r, "closed", null, null) }
                 val combined = open + closed
                 javax.swing.SwingUtilities.invokeLater {
+                    if (gen != generation.get()) return@invokeLater
                     issueData = combined.sortedByDescending { it.createdAt }
                     issueCount = combined.size
                 }
@@ -107,6 +115,7 @@ class ToolWindowState(project: Project) {
 
     fun refresh(silent: Boolean = false) {
         val o = remoteOwner ?: run { reloadConfig(); return }; val r = remoteRepo ?: return
+        val gen = generation.incrementAndGet()
         syncPhase = SyncPhase.FETCHING_ISSUES
         statusText = "Fetching issues..."
         statusColor = UIUtil.getContextHelpForeground()
@@ -118,6 +127,7 @@ class ToolWindowState(project: Project) {
                 val closed = runBlocking { provider.getIssues(o, r, "closed", null, null) }
                 val combined = issues + closed
                 SwingUtilities.invokeLater {
+                    if (gen != generation.get()) return@invokeLater
                     issueData = combined.sortedByDescending { it.createdAt }
                     issueCount = combined.size
                     syncPhase = SyncPhase.FETCHING_PRS
@@ -128,6 +138,7 @@ class ToolWindowState(project: Project) {
                 val prsClosed = runBlocking { provider.getPullRequests(o, r, "closed") }
                 val combinedPR = prsOpen + prsClosed
                 SwingUtilities.invokeLater {
+                    if (gen != generation.get()) return@invokeLater
                     prData = combinedPR.sortedByDescending { it.createdAt }
                     prCount = combinedPR.size
                     syncPhase = SyncPhase.FETCHING_BRANCHES
@@ -137,6 +148,7 @@ class ToolWindowState(project: Project) {
                 val branches = runBlocking { provider.getBranches(o, r) }
                 val now = TimeFormat.now()
                 SwingUtilities.invokeLater {
+                    if (gen != generation.get()) return@invokeLater
                     branchData = branches
                     branchCount = branches.size
                     lastSyncTime = now
@@ -146,11 +158,12 @@ class ToolWindowState(project: Project) {
                 }
             } catch (e: Exception) {
                 SwingUtilities.invokeLater {
+                    if (gen != generation.get()) return@invokeLater
                     syncPhase = SyncPhase.ERROR
                     statusText = "Sync failed"
                     statusColor = UIUtil.getErrorForeground()
                     val tw = com.intellij.openapi.wm.ToolWindowManager.getInstance(myProject)
-                        .getToolWindow("Remote VCS")
+                        .getToolWindow("Anchor")
                     if (tw != null) {
                         JBPopupFactory.getInstance().createHtmlTextBalloonBuilder(
                             e.message ?: "Failed to fetch data", MessageType.ERROR, null

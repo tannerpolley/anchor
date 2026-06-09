@@ -67,8 +67,8 @@ fun RemoteVcsToolWindowContent(project: Project) {
 
 @Composable
 fun MainListScreen(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     Column(modifier = Modifier.fillMaxSize()) {
         HeaderBar(state)
@@ -156,8 +156,8 @@ private fun EmptyPlaceholder(text: String) {
 
 @Composable
 fun HeaderBar(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     Row(
         modifier = Modifier
@@ -229,8 +229,8 @@ fun HeaderBar(state: ToolWindowState) {
 
 @Composable
 fun StatusBar(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
     val awt = state.statusColor
     val color = Color(awt.red / 255f, awt.green / 255f, awt.blue / 255f, awt.alpha / 255f)
     val phaseText = when (state.syncPhase) {
@@ -264,8 +264,8 @@ fun StatusBar(state: ToolWindowState) {
 
 @Composable
 fun IssuesPanel(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     FilterChipRow(
         mapOf("open" to "Open", "closed" to "Closed", "all" to "All"),
@@ -295,8 +295,8 @@ fun IssuesPanel(state: ToolWindowState) {
 
 @Composable
 fun IssueRow(issue: Issue, state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     Column(
         modifier = Modifier
@@ -327,8 +327,8 @@ fun IssueRow(issue: Issue, state: ToolWindowState) {
 
 @Composable
 fun PRsPanel(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     FilterChipRow(
         mapOf("open" to "Open", "merged" to "Merged", "closed" to "Closed", "all" to "All"),
@@ -359,8 +359,8 @@ fun PRsPanel(state: ToolWindowState) {
 
 @Composable
 fun PullRequestRow(pr: PullRequest, state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     Column(
         modifier = Modifier
@@ -431,8 +431,8 @@ private fun RowMetaRow(
 
 @Composable
 fun BranchesPanel(state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     when {
         state.syncPhase == SyncPhase.FETCHING_BRANCHES ||
@@ -447,8 +447,8 @@ fun BranchesPanel(state: ToolWindowState) {
 
 @Composable
 fun BranchRow(branch: GitBranch, state: ToolWindowState) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
     val owner = state.remoteOwner
     val repo = state.remoteRepo
 
@@ -490,8 +490,8 @@ fun FilterChipRow(
     selected: String,
     onSelect: (String) -> Unit
 ) {
-    val theme = rememberThemeColors()
-    val fs = rememberPlatformFonts()
+    val theme = LocalThemeColors.current
+    val fs = LocalPlatformFonts.current
 
     Row(
         modifier = Modifier
