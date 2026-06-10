@@ -9,7 +9,7 @@
 
 **Drop anchor. Manage remote repositories without leaving your editor.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta.1-2563EB?style=flat-square)](https://github.com/itsjeel01/anchor-vcs/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0--beta.1-2563EB?style=flat-square)](https://github.com/alph-a07/anchor/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 
@@ -60,23 +60,25 @@ All builds are available in [GitHub release](../../releases).
 
 ## Supported IDEs
 
-Any IntelliJ-platform IDE at build 253 or later.
+Anchor relies on **JCEF (Java Chromium Embedded Framework)** to natively render GitHub Flavored Markdown, embedded images, and web views. Because of this hard dependency, Anchor requires **Build 253.1** or newer.
 
-| IDE | Status |
-|---|---|
-| Android Studio | ✅ |
-| IntelliJ IDEA (Community & Ultimate) | ✅ |
-| WebStorm | ✅ |
-| PyCharm | ✅ |
-| GoLand | ✅ |
-| All other JetBrains IDEs | ✅ |
+| IDE | Min Version | Status |
+|---|---|---|
+| Android Studio | 2025.x (Build 253+) | ✅ |
+| IntelliJ IDEA (Community & Ultimate) | 2025.3+ | ✅ |
+| WebStorm | 2025.3+ | ✅ |
+| PyCharm | 2025.3+ | ✅ |
+| GoLand | 2025.3+ | ✅ |
+| All other JetBrains IDEs | Build 253.1+ | ✅ |
+
+> **Note:** Ensure your IDE is running on the default JetBrains Runtime (JBR) with JCEF bundled. Custom runtimes without JCEF are not supported.
 
 ## Contributing
 
 Bug reports and feature requests go in [GitHub Issues](../../issues). Pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ```bash
-git clone https://github.com/itsjeel01/anchor.git
+git clone https://github.com/alph-a07/anchor.git
 cd anchor
 ./gradlew runIde          # launch a sandboxed IDE with Anchor loaded
 ./gradlew buildPlugin     # → build/distributions/anchor-*.zip

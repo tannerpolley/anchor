@@ -22,7 +22,7 @@ Thanks for taking the time. Anchor is a solo side project and outside feedback i
 ```bash
 # Clone
 git clone https://github.com/alph-a07/anchor.git
-cd anchor-vcs
+cd anchor
 
 # Run the plugin in a sandboxed IDE instance
 ./gradlew runIde
@@ -69,7 +69,7 @@ src/main/kotlin/com/itsjeel01/remotevcsmanager/
 - Don't add new dependencies without discussion first
 
 #### Branch naming
-Create branches from develop using the format type/description (e.g., feat/, fix/, chore/).
+Create branches from `develop` using the format `type/description `(e.g., `feat/`, `fix/`, `chore/`).
 
 #### Commit messages
 We enforce [Conventional Commits](https://www.conventionalcommits.org/). PRs with non-compliant branch names or commits will be automatically rejected.
