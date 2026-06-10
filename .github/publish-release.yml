@@ -1,0 +1,48 @@
+name: Publish JetBrains Plugin Release
+
+on:
+  push:
+    # This workflow only runs when you push a tag that starts with 'v'
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Plugin
+        # Generates the distributable ZIP
+        run: ./gradlew buildPlugin
+
+      - name: Extract Tag Name
+        id: extract_tag
+        # Strips 'refs/tags/' from the github reference to get just 'v1.0.0-beta.1'
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Anchor ${{ env.TAG_NAME }}
+          # Automatically generates a beautiful changelog from your merged PRs!
+          generate_release_notes: true
+          # Uploads the zip file found in the build directory
+          files: build/distributions/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
