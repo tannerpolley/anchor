@@ -1,0 +1,66 @@
+name: PR Compliance Enforcer
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Grants the action permission to post a comment on the PR
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  validate-pr:
+    name: Enforce Naming Constraints
+    runs-on: ubuntu-latest
+    # This completely skips the check if YOU (the repo owner) are the one making the PR
+    if: github.event.pull_request.user.login != github.repository_owner
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed to inspect commit history
+
+      - name: Validate Branch Name
+        env:
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Your exact branch regex
+          BRANCH_REGEX="^(main|develop)$|^(feat|fix|refactor|chore|docs|test|ci)/[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          
+          if [[ ! "$BRANCH_NAME" =~ $BRANCH_REGEX ]]; then
+            gh pr comment $PR_NUMBER --body "❌ **Branch Name Violation**
+            Your branch \`$BRANCH_NAME\` does not match the project's strict naming conventions. 
+            Please rename your branch using the format \`type/issue-description\` (e.g., \`feat/add-status-badge\`) and update the PR."
+          
+            echo "::error::Invalid branch name: $BRANCH_NAME"
+            exit 1
+          fi
+
+      - name: Validate Commit Messages
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Standard Conventional Commits Regex: type(scope?): description
+          COMMIT_REGEX="^(feat|fix|refactor|chore|docs|test|ci|style|perf)(\([a-zA-Z0-9_-]+\))?: .+"
+          
+          # Iterate through all commits in the PR
+          for COMMIT_SHA in $(git log --format="%H" $BASE_REF..$HEAD_REF); do
+            MESSAGE=$(git log --format="%s" -n 1 $COMMIT_SHA)
+          
+            if [[ ! "$MESSAGE" =~ $COMMIT_REGEX ]]; then
+              gh pr comment $PR_NUMBER --body "❌ **Commit Message Violation**
+              The commit \`$COMMIT_SHA\` has an invalid message: _\"$MESSAGE\"_
+          
+              This project requires standard Conventional Commits (e.g., \`feat: added new UI element\` or \`fix(auth): resolved token issue\`). Please squash/reword your commits and force push."
+          
+              echo "::error::Invalid commit message on $COMMIT_SHA: $MESSAGE"
+              exit 1
+            fi
+          done
