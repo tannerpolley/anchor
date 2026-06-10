@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>com.itsjeel01.remoteVcsManager</id>
     <name>Anchor — Remote VCS</name>
-    <vendor email="itsjeel01@gmail.com" url="https://github.com/alph-a07">Jeel Patel</vendor>
+    <vendor email="anchor+itsjeel01@gmail.com" url="https://github.com/alph-a07">Jeel Patel</vendor>
 
     <description><![CDATA[
         <p>Manage GitHub issues, pull requests, and branches without leaving your IDE.</p>

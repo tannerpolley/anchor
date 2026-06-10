@@ -47,7 +47,7 @@ intellijPlatform {
 
         vendor {
             name = "Jeel Patel"
-            email = "itsjeel01@gmail.com"
+            email = "anchor+itsjeel01@gmail.com"
             url = "https://github.com/alph-a07/anchor"
         }
 
