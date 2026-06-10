@@ -1,11 +1,11 @@
 <!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.itsjeel01.remoteVcsManager</id>
-    <name>Anchor - Remote VCS</name>
+    <name>Anchor — Remote VCS</name>
     <vendor email="itsjeel01@gmail.com" url="https://github.com/alph-a07">Jeel Patel</vendor>
 
     <description><![CDATA[
-        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/readme_banner.svg" width="100%" alt="Anchor - Remote VCS for JetBrains"/>
+        <p>Manage GitHub issues, pull requests, and branches without leaving your IDE.</p>
 
         <p>
             The average developer leaves their IDE for GitHub <strong>38 times a day</strong>.
@@ -14,8 +14,8 @@
 
         <h3>What you can do</h3>
         <ul>
-            <li>Browse <strong>Issues</strong> and <strong>Pull Requests</strong> with filter, state badges, and metadata</li>
-            <li>Read full descriptions rendered as GitHub Flavored Markdown - embedded images included</li>
+            <li>Browse <strong>Issues</strong> and <strong>Pull Requests</strong> with filters, state badges, and metadata</li>
+            <li>Read full descriptions rendered as GitHub Flavored Markdown — embedded images included</li>
             <li>Post comments without opening a browser tab</li>
             <li>Inspect PR commits with clickable SHAs and source → target branch info</li>
             <li>View and switch <strong>Branches</strong> from the same panel</li>
@@ -24,25 +24,16 @@
             <li>Open the current file on GitHub from the editor context menu</li>
         </ul>
 
-        <h3>Screenshots</h3>
-        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/issues.png" width="49%" alt="Issues panel"/>
-        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/prs.png" width="49%" alt="Pull Requests panel"/>
-        <br/>
-        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/issue-detail.png" width="49%" alt="Issue detail"/>
-        <img src="https://raw.githubusercontent.com/alph-a07/anchor/main/assets/pr-detail.png" width="49%" alt="PR detail"/>
-
         <h3>Setup</h3>
         <ol>
             <li>Go to <strong>Settings → Tools → Anchor - Remote VCS</strong></li>
             <li>Generate and validate a GitHub token in a few clicks</li>
-            <li>Open the <strong>Anchor</strong> tool window - your repository is auto-detected from the git remote</li>
+            <li>Open the <strong>Anchor</strong> tool window — your repository is auto-detected from the git remote</li>
         </ol>
 
         <p>
-            Compatible with Android Studio and all IntelliJ-platform IDEs at build 253 or later.<br/>
-            <a href="https://github.com/alph-a07/anchor">GitHub</a> ·
-            <a href="https://github.com/alph-a07/anchor/issues">Report a bug</a> ·
-            MIT License
+            Compatible with Android Studio and all IntelliJ-platform IDEs at build 253.1 or later.
+            Free and open source — MIT License.
         </p>
     ]]></description>
 
