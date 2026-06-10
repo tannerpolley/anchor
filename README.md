@@ -2,7 +2,9 @@
 
 <!-- Replace with: docs/banner.svg — recommended size 1200×300, dark-mode safe -->
 <img src="assets/readme_banner.svg" width="100%" alt="Anchor — Remote VCS for JetBrains"/>
+<sub> P.S: I am the average developer </sub>
 
+<br/>
 <br/>
 
 **Drop anchor. Manage remote repositories without leaving your editor.**
