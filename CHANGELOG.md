@@ -5,6 +5,13 @@ All notable changes to Anchor — Remote VCS for JetBrains are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.2] - 2026-06-11
+
+### Fixed
+- Fixed invalid em dash character in plugin name preventing Marketplace upload.
+
+---
+
 ---
 
 ## [1.0.0-beta.1] - 2026-06-09
