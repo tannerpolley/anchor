@@ -2,10 +2,13 @@ name: Publish JetBrains Plugin Release
 
 on:
   push:
-    # This workflow only runs when you push a tag that starts with 'v'
+    # Triggers automatically when you push a tag like v1.0.0-beta.2
     tags:
       - 'v*'
+  # Provides a manual "Run workflow" button in the Actions tab just in case
+  workflow_dispatch: 
 
+# Grants the action permission to create a release and upload the .zip
 permissions:
   contents: write
 
@@ -22,7 +25,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '21'
+          java-version: '21' 
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -33,16 +36,39 @@ jobs:
 
       - name: Extract Tag Name
         id: extract_tag
-        # Strips 'refs/tags/' from the github reference to get just 'v1.0.0-beta.1'
+        # Strips 'refs/tags/' to get the clean tag name (e.g., v1.0.0-beta.2)
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Generate Changelog Anchor
+        id: get_anchor
+        run: |
+          # 1. Strip the 'v' to match your changelog format (e.g., 1.0.0-beta.2)
+          VERSION="${TAG_NAME#v}"
+          
+          # 2. Find the exact line in CHANGELOG.md starting with "## [VERSION]"
+          HEADER=$(grep -E "^## \[$VERSION\]" CHANGELOG.md | head -n 1)
+          
+          # 3. Strip the leading "## "
+          CLEAN_HEADER=$(echo "$HEADER" | sed 's/^## //')
+          
+          # 4. Mimic GitHub's anchor parsing: lowercase, spaces to hyphens, strip punctuation
+          ANCHOR=$(echo "$CLEAN_HEADER" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9_-]//g')
+          
+          # 5. Save the anchor to the environment
+          echo "ANCHOR=$ANCHOR" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Anchor ${{ env.TAG_NAME }}
-          # Automatically generates a beautiful changelog from your merged PRs!
-          generate_release_notes: true
-          # Uploads the zip file found in the build directory
+          # Prevents GitHub from appending the ugly commit diff list
+          generate_release_notes: false 
+          body: |
+            Welcome to Anchor `${{ env.TAG_NAME }}`! ⚓️
+            
+            All new features, UI improvements, and bug fixes are documented in the project's official changelog.
+            
+            👉 **[Read the release notes for ${{ env.TAG_NAME }}](https://github.com/alph-a07/anchor/blob/main/CHANGELOG.md#${{ env.ANCHOR }})**
           files: build/distributions/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
