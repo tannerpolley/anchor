@@ -68,6 +68,12 @@ src/main/kotlin/com/itsjeel01/remotevcsmanager/
 - Run `verifyPlugin` before opening the PR — it catches most plugin.xml issues
 - Don't add new dependencies without discussion first
 
+#### Branch naming
+Create branches from develop using the format type/description (e.g., feat/, fix/, chore/).
+
+#### Commit messages
+We enforce [Conventional Commits](https://www.conventionalcommits.org/). PRs with non-compliant branch names or commits will be automatically rejected.
+
 ---
 
 ## Reporting bugs
