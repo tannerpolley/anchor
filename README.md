@@ -9,7 +9,7 @@
 
 **Drop anchor. Manage remote repositories without leaving your editor.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0--beta.1-2563EB?style=flat-square)](https://github.com/alph-a07/anchor/releases)
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/32218.svg?logo=jetbrains&label=Marketplace)](https://plugins.jetbrains.com/plugin/32218)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
 [![Kotlin](https://img.shields.io/badge/kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 
