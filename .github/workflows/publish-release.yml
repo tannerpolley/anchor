@@ -34,6 +34,11 @@ jobs:
         # Generates the distributable ZIP
         run: ./gradlew buildPlugin
 
+      - name: Publish to JetBrains Marketplace
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin
+
       - name: Extract Tag Name
         id: extract_tag
         # Strips 'refs/tags/' to get the clean tag name (e.g., v1.0.0-beta.2)

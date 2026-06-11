@@ -64,6 +64,18 @@ intellijPlatform {
             extension.renderItem(versionItem, Changelog.OutputType.HTML)
         })
     }
+
+    publishing {
+        token.set(providers.environmentVariable("PUBLISH_TOKEN"))
+
+        val currentVersion = project.version.toString()
+        val releaseChannel = when {
+            currentVersion.contains("beta", ignoreCase = true) -> "beta"
+            currentVersion.contains("alpha", ignoreCase = true) -> "alpha"
+            else -> "default"
+        }
+        channels.set(listOf(releaseChannel))
+    }
 }
 
 changelog {
