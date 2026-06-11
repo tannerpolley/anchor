@@ -69,12 +69,14 @@ intellijPlatform {
         token.set(providers.environmentVariable("PUBLISH_TOKEN"))
 
         val currentVersion = project.version.toString()
-        val releaseChannel = when {
-            currentVersion.contains("beta", ignoreCase = true) -> "beta"
-            currentVersion.contains("alpha", ignoreCase = true) -> "alpha"
-            else -> "default"
+        val targetChannels = mutableListOf("default")
+
+        if (currentVersion.contains("beta", ignoreCase = true)) {
+            targetChannels.add("beta")
+        } else if (currentVersion.contains("alpha", ignoreCase = true)) {
+            targetChannels.add("alpha")
         }
-        channels.set(listOf(releaseChannel))
+        channels.set(targetChannels)
     }
 }
 
