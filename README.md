@@ -60,16 +60,23 @@ All builds are available in [GitHub release](../../releases).
 
 ## Supported IDEs
 
-Anchor relies on **JCEF (Java Chromium Embedded Framework)** to natively render GitHub Flavored Markdown, embedded images, and web views. Because of this hard dependency, Anchor requires **Build 253.1** or newer.
+Anchor relies on **JCEF (Java Chromium Embedded Framework)** to natively render GitHub Flavored Markdown, embedded images, and web views. Because of this hard dependency, Anchor requires the following minimum builds:
 
 | IDE | Min Version | Status |
 |---|---|---|
-| Android Studio | 2025.x (Build 253+) | ✅ |
-| IntelliJ IDEA (Community & Ultimate) | 2025.3+ | ✅ |
-| WebStorm | 2025.3+ | ✅ |
-| PyCharm | 2025.3+ | ✅ |
+| Android Studio | Panda 1 \| 2025.3.1+ | ✅ |
+| CLion | 2025.3+ | ✅ |
+| DataGrip | 2025.3+ | ✅ |
+| DataSpell | 2025.3+ | ✅ |
 | GoLand | 2025.3+ | ✅ |
-| All other JetBrains IDEs | Build 253.1+ | ✅ |
+| IntelliJ IDEA (Ultimate & Community) | 2025.3+ | ✅ |
+| MPS | 2025.3+ | ✅ |
+| PhpStorm | 2025.3+ | ✅ |
+| PyCharm (Professional & Community) | 2025.3+ | ✅ |
+| Rider | 2025.3+ | ✅ |
+| RubyMine | 2025.3+ | ✅ |
+| RustRover | 2025.3+ | ✅ |
+| WebStorm | 2025.3+ | ✅ |
 
 > **Note:** Ensure your IDE is running on the default JetBrains Runtime (JBR) with JCEF bundled. Custom runtimes without JCEF are not supported.
 
