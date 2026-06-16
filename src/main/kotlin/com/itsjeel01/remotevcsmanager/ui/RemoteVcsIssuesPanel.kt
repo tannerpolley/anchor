@@ -10,8 +10,9 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.ui.JBUI
+import com.itsjeel01.remotevcsmanager.GitRemoteDetector.GitRemoteInfo
+import com.itsjeel01.remotevcsmanager.GitRootDiscovery
 import com.itsjeel01.remotevcsmanager.GitRemoteDetector
-import git4idea.repo.GitRepositoryManager
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.FlowLayout
@@ -132,40 +133,19 @@ object RemoteVcsIssuesPanel {
 
     private fun resolveTargets(project: Project): List<RepoTarget> {
         val detector = GitRemoteDetector(project)
-        val repositories = try {
-            GitRepositoryManager.getInstance(project).repositories
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-        val repoTargets = repositories.mapNotNull { repository ->
-            val remote = repository.remotes.firstOrNull { it.name == "origin" }
-                ?: repository.remotes.firstOrNull()
-            val remoteUrl = remote?.firstUrl ?: return@mapNotNull null
-            createTarget(detector, repository.root.name, remoteUrl, repository.root.path)
-        }
-
-        if (repoTargets.isNotEmpty()) {
-            return repoTargets.distinctBy { it.issuesUrl }.sortedBy { it.displayName.lowercase() }
-        }
-
-        val detected = detector.detect() ?: return emptyList()
-        return listOfNotNull(createTarget(detector, detected.repoName, detected.remoteUrl, detected.gitRoot.absolutePath))
+        return GitRootDiscovery.roots(project).mapNotNull { root ->
+            detector.detect(root)?.let(::createTarget)
+        }.distinctBy { it.issuesUrl }
+            .sortedBy { it.displayName.lowercase() }
     }
 
-    private fun createTarget(
-        detector: GitRemoteDetector,
-        displayName: String,
-        remoteUrl: String,
-        rootPath: String
-    ): RepoTarget? {
-        val parsed = detector.parseRemoteUrl(remoteUrl) ?: return null
-        if (parsed.provider != "github") return null
-        val host = parseRemoteHost(remoteUrl) ?: "github.com"
+    private fun createTarget(remote: GitRemoteInfo): RepoTarget? {
+        if (remote.provider != "github") return null
+        val host = parseRemoteHost(remote.remoteUrl) ?: "github.com"
         return RepoTarget(
-            displayName = displayName,
-            rootPath = rootPath,
-            issuesUrl = "https://$host/${parsed.owner}/${parsed.repoName}/issues"
+            displayName = remote.repoName,
+            rootPath = remote.gitRoot.absolutePath,
+            issuesUrl = "https://$host/${remote.owner}/${remote.repoName}/issues"
         )
     }
 
