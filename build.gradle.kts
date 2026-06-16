@@ -25,6 +25,7 @@ dependencies {
         intellijIdeaCommunity("2025.2")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
         bundledPlugin("Git4Idea")
+        bundledPlugin("org.jetbrains.plugins.github")
     }
 
     implementation(compose.desktop.currentOs)

@@ -79,7 +79,7 @@ object JcefDiagnostics {
         }
 
         val browser = tryCreate(diag)
-        diag.forEach { LOG.warn("  $it") }
+        diag.forEach { LOG.info("  $it") }
         return Result(browser, diag)
     }
 

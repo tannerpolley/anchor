@@ -40,6 +40,7 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.jcef</depends>
     <depends>Git4Idea</depends>
+    <depends>org.jetbrains.plugins.github</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup

@@ -3,6 +3,7 @@ package com.itsjeel01.remotevcsmanager.ui
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
@@ -13,13 +14,18 @@ import com.itsjeel01.remotevcsmanager.GitRemoteDetector
 import com.itsjeel01.remotevcsmanager.GitRemoteDetector.GitRemoteInfo
 import com.itsjeel01.remotevcsmanager.GitRootDiscovery
 import com.itsjeel01.remotevcsmanager.models.Issue
+import com.itsjeel01.remotevcsmanager.models.IssueComment
+import com.itsjeel01.remotevcsmanager.providers.github.GitHubAuth
+import com.itsjeel01.remotevcsmanager.providers.github.JetBrainsGithubTokenProvider
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
+import com.itsjeel01.remotevcsmanager.ui.detail.SwingIssueDetailRenderer
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.util.concurrent.atomic.AtomicLong
 import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListModel
 import javax.swing.JButton
@@ -45,22 +51,35 @@ object RemoteVcsIssuesPanel {
         }
 
         val selected = SelectedTarget(targets.first())
+        val provider = createProvider(project)
+        val detailRenderer = SwingIssueDetailRenderer()
+        val detailRequests = AtomicLong()
         val issuesModel = DefaultListModel<Issue>()
         val status = JBLabel()
         val issuesList = createIssuesList(issuesModel)
+        Disposer.register(project, detailRenderer)
 
-        panel.add(createHeader(project, selected, status, issuesModel, issuesList), BorderLayout.NORTH)
-        panel.add(createContent(project, targets, selected, issuesModel, status, issuesList), BorderLayout.CENTER)
-        loadIssues(project, selected.target, issuesModel, status)
+        panel.add(
+            createHeader(project, provider, selected, status, issuesModel, issuesList, detailRenderer, detailRequests),
+            BorderLayout.NORTH
+        )
+        panel.add(
+            createContent(project, provider, targets, selected, issuesModel, status, issuesList, detailRenderer, detailRequests),
+            BorderLayout.CENTER
+        )
+        loadIssues(project, provider, selected.target, issuesModel, status, detailRenderer, detailRequests)
         return panel
     }
 
     private fun createHeader(
         project: Project,
+        provider: GitHubProvider,
         selected: SelectedTarget,
         status: JBLabel,
         issuesModel: DefaultListModel<Issue>,
-        issuesList: JBList<Issue>
+        issuesList: JBList<Issue>,
+        detailRenderer: SwingIssueDetailRenderer,
+        detailRequests: AtomicLong
     ): JComponent {
         val header = JBPanel<JBPanel<*>>(BorderLayout())
         header.border = JBUI.Borders.emptyBottom(8)
@@ -83,7 +102,7 @@ object RemoteVcsIssuesPanel {
 
         val refresh = JButton("Refresh").apply {
             addActionListener {
-                loadIssues(project, selected.target, issuesModel, status)
+                loadIssues(project, provider, selected.target, issuesModel, status, detailRenderer, detailRequests)
             }
         }
         val openRepo = JButton("Open in Browser").apply {
@@ -100,14 +119,39 @@ object RemoteVcsIssuesPanel {
 
     private fun createContent(
         project: Project,
+        provider: GitHubProvider,
         targets: List<RepoTarget>,
         selected: SelectedTarget,
         issuesModel: DefaultListModel<Issue>,
         status: JBLabel,
-        issuesList: JBList<Issue>
+        issuesList: JBList<Issue>,
+        detailRenderer: SwingIssueDetailRenderer,
+        detailRequests: AtomicLong
     ): JComponent {
+        issuesList.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                val issue = issuesList.selectedValue
+                if (issue == null) {
+                    detailRequests.incrementAndGet()
+                    detailRenderer.showPlaceholder("Select an issue to read its body and comments.")
+                } else {
+                    loadIssueDetail(project, provider, selected.target, issue, detailRenderer, detailRequests)
+                }
+            }
+        }
+
+        val issueDetail = JSplitPane(
+            JSplitPane.HORIZONTAL_SPLIT,
+            JBScrollPane(issuesList),
+            detailRenderer.component
+        ).apply {
+            border = JBUI.Borders.empty()
+            resizeWeight = 0.38
+            dividerLocation = JBUI.scale(430)
+        }
+
         if (targets.size == 1) {
-            return JBScrollPane(issuesList)
+            return issueDetail
         }
 
         val repoList = createRepoList(targets)
@@ -115,14 +159,14 @@ object RemoteVcsIssuesPanel {
             if (!it.valueIsAdjusting) {
                 val target = repoList.selectedValue ?: return@addListSelectionListener
                 selected.target = target
-                loadIssues(project, target, issuesModel, status)
+                loadIssues(project, provider, target, issuesModel, status, detailRenderer, detailRequests)
             }
         }
 
         return JSplitPane(
             JSplitPane.HORIZONTAL_SPLIT,
             JBScrollPane(repoList),
-            JBScrollPane(issuesList)
+            issueDetail
         ).apply {
             border = JBUI.Borders.empty()
             resizeWeight = 0.0
@@ -154,18 +198,23 @@ object RemoteVcsIssuesPanel {
 
     private fun loadIssues(
         project: Project?,
+        provider: GitHubProvider,
         target: RepoTarget,
         model: DefaultListModel<Issue>,
-        status: JBLabel
+        status: JBLabel,
+        detailRenderer: SwingIssueDetailRenderer,
+        detailRequests: AtomicLong
     ) {
+        detailRequests.incrementAndGet()
         model.clear()
+        detailRenderer.showPlaceholder("Select an issue to read its body and comments.")
         status.text = "Loading ${target.displayName}..."
         status.foreground = UIUtil.getContextHelpForeground()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val result = runCatching {
                 runBlocking {
-                    GitHubProvider().getIssues(target.owner, target.repoName, "open", null, null)
+                    provider.getIssues(target.owner, target.repoName, "open", null, null)
                 }
             }
 
@@ -183,6 +232,47 @@ object RemoteVcsIssuesPanel {
             }
         }
     }
+
+    private fun loadIssueDetail(
+        project: Project,
+        provider: GitHubProvider,
+        target: RepoTarget,
+        issue: Issue,
+        detailRenderer: SwingIssueDetailRenderer,
+        detailRequests: AtomicLong
+    ) {
+        val requestId = detailRequests.incrementAndGet()
+        detailRenderer.showLoading(issue)
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val result = runCatching {
+                runBlocking {
+                    val context = "${target.owner}/${target.repoName}"
+                    val comments = provider.getIssueComments(target.owner, target.repoName, issue.number)
+                    val body = renderMarkdown(provider, issue.body.orEmpty(), context)
+                    val renderedComments = comments.map { renderMarkdown(provider, it.body, context) }
+                    IssueDetail(comments, body, renderedComments)
+                }
+            }
+
+            SwingUtilities.invokeLater {
+                if (project.isDisposed || detailRequests.get() != requestId) return@invokeLater
+                result.onSuccess { detail ->
+                    detailRenderer.showIssue(issue, detail.comments, detail.body, detail.renderedComments)
+                }.onFailure { error ->
+                    detailRenderer.showError(issue, error.message ?: "GitHub API request failed")
+                }
+            }
+        }
+    }
+
+    private suspend fun renderMarkdown(provider: GitHubProvider, markdown: String, context: String): String {
+        if (markdown.isBlank()) return "<p><em>No description provided.</em></p>"
+        val rendered = provider.renderMarkdown(markdown, context)
+        return if (rendered == markdown) "<pre>${markdown.escapeHtml()}</pre>" else rendered
+    }
+
+    private fun createProvider(project: Project): GitHubProvider =
+        GitHubProvider(GitHubAuth { JetBrainsGithubTokenProvider.getToken(project) })
 
     private fun createMessagePanel(message: String): JComponent {
         val area = JTextArea(message)
@@ -280,6 +370,12 @@ object RemoteVcsIssuesPanel {
 
     private data class SelectedTarget(var target: RepoTarget)
 
+    private data class IssueDetail(
+        val comments: List<IssueComment>,
+        val body: String,
+        val renderedComments: List<String>
+    )
+
     private data class RepoTarget(
         val displayName: String,
         val owner: String,
@@ -287,4 +383,9 @@ object RemoteVcsIssuesPanel {
         val rootPath: String,
         val issuesUrl: String
     )
+
+    private fun String.escapeHtml(): String =
+        replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
 }

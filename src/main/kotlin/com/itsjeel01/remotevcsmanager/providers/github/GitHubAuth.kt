@@ -5,7 +5,9 @@ import com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState
 /**
  * Handles GitHub Personal Access Token (PAT) storage and validation.
  */
-class GitHubAuth {
+class GitHubAuth(
+    private val tokenProvider: (() -> String?)? = null
+) {
 
     companion object {
         private const val PROVIDER_KEY = "github"
@@ -46,7 +48,8 @@ class GitHubAuth {
     /**
      * Check if a token has been saved.
      */
-    fun hasToken(): Boolean = settings.hasToken(PROVIDER_KEY)
+    fun hasToken(): Boolean =
+        tokenProvider?.invoke()?.isNotBlank() == true || settings.hasToken(PROVIDER_KEY)
 
     /**
      * Basic format validation of a GitHub PAT.
@@ -62,7 +65,9 @@ class GitHubAuth {
      * Get the authorization header value for API calls.
      */
     fun getAuthorizationHeader(): String? {
-        val token = getToken()?.takeIf { it.isNotBlank() } ?: return null
+        val token = tokenProvider?.invoke()?.takeIf { it.isNotBlank() }
+            ?: getToken()?.takeIf { it.isNotBlank() }
+            ?: return null
         return "$TOKEN_PREFIX$token"
     }
 }
