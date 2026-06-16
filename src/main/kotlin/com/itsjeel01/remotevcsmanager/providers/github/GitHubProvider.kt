@@ -73,10 +73,39 @@ class GitHubProvider(
         filter: String?,
         labels: String?
     ): List<Issue> {
-        return apiClient.getIssues(owner, repo, state, filter, labels)
+        return getIssuesSorted(owner, repo, state, filter, labels, sort = "updated", direction = "desc")
+    }
+
+    suspend fun getIssuesSorted(
+        owner: String,
+        repo: String,
+        state: String,
+        filter: String?,
+        labels: String?,
+        sort: String,
+        direction: String
+    ): List<Issue> {
+        return apiClient.getIssues(owner, repo, state, filter, labels, sort, direction)
             .getOrThrow()
             .map { json -> toIssue(json) }
             .filter { !it.isPullRequest }
+    }
+
+    suspend fun getIssueTrackingAccess(
+        owner: String,
+        repo: String,
+        accountLogins: Set<String>
+    ): GitHubIssueTrackingAccess {
+        val repository = apiClient.getRepository(owner, repo).getOrThrow()
+        val repositoryOwner = apiClient.safeObject(repository, "owner")?.let {
+            apiClient.safeString(it, "login")
+        }.orEmpty().lowercase()
+        val permissions = apiClient.safeObject(repository, "permissions")
+        val hasAdminPermission = permissions?.let { apiClient.safeBoolean(it, "admin") } ?: false
+        return GitHubIssueTrackingAccess(
+            owned = repositoryOwner in accountLogins || hasAdminPermission,
+            fork = apiClient.safeBoolean(repository, "fork")
+        )
     }
 
     override suspend fun createIssue(
@@ -255,6 +284,9 @@ class GitHubProvider(
         } else emptyList()
 
         val prField = apiClient.safeObject(json, "pull_request")
+        val milestone = apiClient.safeObject(json, "milestone")?.let {
+            apiClient.safeString(it, "title")
+        }
         return Issue(
             id = apiClient.safeLong(json, "id").toString(),
             number = json.get("number").asInt,
@@ -269,7 +301,8 @@ class GitHubProvider(
             createdAt = apiClient.safeString(json, "created_at") ?: "",
             updatedAt = apiClient.safeString(json, "updated_at") ?: "",
             isPullRequest = prField != null,
-            provider = key
+            provider = key,
+            milestone = milestone
         )
     }
 
@@ -279,3 +312,8 @@ class GitHubProvider(
         else -> PRState.OPEN
     }
 }
+
+data class GitHubIssueTrackingAccess(
+    val owned: Boolean,
+    val fork: Boolean
+)

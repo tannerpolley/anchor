@@ -30,7 +30,8 @@ data class Issue(
     val createdAt: String,
     val updatedAt: String,
     val isPullRequest: Boolean,
-    val provider: String
+    val provider: String,
+    val milestone: String? = null
 )
 
 enum class IssueState {

@@ -18,12 +18,13 @@ import javax.swing.JTextArea
 object RemoteVcsIssuesPanel {
 
     fun create(project: Project): JComponent {
-        val targets = resolveTargets(project)
+        val accountLogins = JetBrainsGithubTokenProvider.getAccountLogins(project)
+        val targets = if (accountLogins.isEmpty()) emptyList() else resolveTargets(project)
         val panel = JBPanel<JBPanel<*>>(BorderLayout())
         panel.border = JBUI.Borders.empty(8)
 
         if (targets.isEmpty()) {
-            panel.add(createMessagePanel("Anchor could not detect a GitHub remote for this project."), BorderLayout.CENTER)
+            panel.add(createMessagePanel(emptyTargetsMessage(accountLogins)), BorderLayout.CENTER)
             return panel
         }
 
@@ -34,6 +35,7 @@ object RemoteVcsIssuesPanel {
             project = project,
             provider = createProvider(project),
             targets = targets,
+            accountLogins = accountLogins,
             detailRenderer = detailRenderer
         )
         panel.add(treePanel.component, BorderLayout.CENTER)
@@ -75,6 +77,13 @@ object RemoteVcsIssuesPanel {
 
     private fun createProvider(project: Project): GitHubProvider =
         GitHubProvider(GitHubAuth { JetBrainsGithubTokenProvider.getToken(project) })
+
+    private fun emptyTargetsMessage(accountLogins: Set<String>): String =
+        if (accountLogins.isEmpty()) {
+            "Sign in to GitHub in IntelliJ IDEA to show issues for remotes owned by your account."
+        } else {
+            "Anchor could not detect a GitHub remote for this project."
+        }
 
     private fun createMessagePanel(message: String): JComponent {
         val area = JTextArea(message)

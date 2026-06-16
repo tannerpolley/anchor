@@ -247,13 +247,32 @@ class GitHubApiClient(
         sort: String = "updated",
         direction: String = "desc"
     ): Result<List<JsonObject>> {
-        var path = "/repos/${encodePath(owner)}/${encodePath(repo)}/issues?state=$state&sort=$sort&direction=$direction&per_page=50"
-        if (filter != null) path += "&filter=$filter"
-        if (labels != null) path += "&labels=$labels"
-        val request = buildGetRequest(path)
-        return executeRequest(request).map { body ->
-            parseJson(body).asJsonArray.map { it.asJsonObject }
+        val issues = mutableListOf<JsonObject>()
+        var page = 1
+        var hasMore = true
+
+        while (hasMore) {
+            var path = "/repos/${encodePath(owner)}/${encodePath(repo)}/issues" +
+                "?state=$state&sort=$sort&direction=$direction&per_page=100&page=$page"
+            if (filter != null) path += "&filter=$filter"
+            if (labels != null) path += "&labels=$labels"
+            val request = buildGetRequest(path)
+            val result = executeRequest(request)
+            if (result.isFailure) {
+                val ex = result.exceptionOrNull()
+                return Result.failure(ex ?: Exception("Failed to fetch issues"))
+            }
+
+            val pageIssues = parseJson(result.getOrNull().orEmpty()).asJsonArray
+            if (pageIssues.size() == 0) {
+                hasMore = false
+            } else {
+                pageIssues.forEach { issues.add(it.asJsonObject) }
+                page += 1
+            }
         }
+
+        return Result.success(issues)
     }
 
     /**

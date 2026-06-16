@@ -24,6 +24,17 @@ object JetBrainsGithubTokenProvider {
             LOG.debug("Unable to read JetBrains GitHub credentials", it)
         }.getOrNull()
 
+    fun getAccountLogins(project: Project): Set<String> =
+        runCatching {
+            (listOfNotNull(selectAccount(project)) + readAccounts())
+                .map { it.name }
+                .filter { it.isNotBlank() }
+                .map { it.lowercase() }
+                .toSet()
+        }.onFailure {
+            LOG.debug("Unable to read JetBrains GitHub account logins", it)
+        }.getOrDefault(emptySet())
+
     private fun selectAccount(project: Project): GithubAccount? {
         val selected = GHAccountsUtil.getSingleOrDefaultAccount(project)
         if (selected != null) return selected

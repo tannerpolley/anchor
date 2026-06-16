@@ -18,6 +18,7 @@ import java.awt.FlowLayout
 import java.awt.Font
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
+import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JSplitPane
@@ -31,6 +32,7 @@ internal class RepoIssuesTreePanel(
     private val project: Project,
     private val provider: GitHubProvider,
     private val targets: List<RepoIssueTarget>,
+    private val accountLogins: Set<String>,
     private val detailRenderer: SwingIssueDetailRenderer
 ) {
 
@@ -38,12 +40,14 @@ internal class RepoIssuesTreePanel(
     private val treeModel = DefaultTreeModel(rootNode)
     private val tree = Tree(treeModel)
     private val status = JBLabel()
+    private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
     private val detailRequests = AtomicLong()
     private val treeRequests = AtomicLong()
     private var selectedTarget: RepoIssueTarget = targets.first()
     private var selectedIssue: Issue? = null
+    private var hasVisibleTargets = targets.isNotEmpty()
 
     val component: JComponent = createComponent()
 
@@ -81,8 +85,13 @@ internal class RepoIssuesTreePanel(
         openRepoButton.apply {
             addActionListener { BrowserUtil.browse(selectedTarget.issuesUrl) }
         }
+        sortBox.apply {
+            addActionListener { reloadIssues() }
+        }
 
         actions.add(status)
+        actions.add(JBLabel("Sort:"))
+        actions.add(sortBox)
         actions.add(refresh)
         actions.add(openIssueButton)
         actions.add(openRepoButton)
@@ -114,6 +123,7 @@ internal class RepoIssuesTreePanel(
 
     private fun reloadIssues(): Unit {
         val requestId = treeRequests.incrementAndGet()
+        val sortOption = selectedSortOption()
         detailRequests.incrementAndGet()
         selectedIssue = null
         syncButtons()
@@ -124,10 +134,28 @@ internal class RepoIssuesTreePanel(
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val result = targets.map { target ->
-                target to runCatching {
+                runCatching {
                     runBlocking {
-                        provider.getIssues(target.owner, target.repoName, "open", null, null)
+                        val access = provider.getIssueTrackingAccess(target.owner, target.repoName, accountLogins)
+                        when {
+                            access.fork -> RepoLoadResult.HiddenFork(target)
+                            !access.owned -> RepoLoadResult.HiddenNotOwned(target)
+                            else -> {
+                                val issues = provider.getIssuesSorted(
+                                    owner = target.owner,
+                                    repo = target.repoName,
+                                    state = "open",
+                                    filter = null,
+                                    labels = null,
+                                    sort = sortOption.apiSort,
+                                    direction = sortOption.apiDirection
+                                )
+                                RepoLoadResult.Loaded(target, sortOption.sort(issues))
+                            }
+                        }
                     }
+                }.getOrElse { error ->
+                    RepoLoadResult.Failed(target, error.message ?: "GitHub API request failed")
                 }
             }
 
@@ -149,39 +177,59 @@ internal class RepoIssuesTreePanel(
         expandRepositoryNodes()
     }
 
-    private fun showIssueNodes(results: List<Pair<RepoIssueTarget, Result<List<Issue>>>>): Unit {
+    private fun showIssueNodes(results: List<RepoLoadResult>): Unit {
         rootNode.removeAllChildren()
         var total = 0
         var failures = 0
+        var hiddenForks = 0
+        var hiddenNonOwned = 0
+        val visibleTargets = mutableListOf<RepoIssueTarget>()
 
-        results.forEach { (target, result) ->
-            result.onSuccess { issues ->
-                total += issues.size
-                val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, issues.size))
-                if (issues.isEmpty()) {
-                    repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
-                } else {
-                    issues.forEach { issue ->
-                        repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.IssueNode(target, issue)))
+        results.forEach { result ->
+            when (result) {
+                is RepoLoadResult.Loaded -> {
+                    val target = result.target
+                    val issues = result.issues
+                    visibleTargets.add(target)
+                    total += issues.size
+                    val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, issues.size))
+                    if (issues.isEmpty()) {
+                        repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+                    } else {
+                        issues.forEach { issue ->
+                            repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.IssueNode(target, issue)))
+                        }
                     }
+                    rootNode.add(repoNode)
                 }
-                rootNode.add(repoNode)
-            }.onFailure { error ->
-                failures += 1
-                val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, null))
-                repoNode.add(
-                    DefaultMutableTreeNode(
-                        RepoIssueTreeItem.Message(error.message ?: "GitHub API request failed")
+                is RepoLoadResult.Failed -> {
+                    failures += 1
+                    visibleTargets.add(result.target)
+                    val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(result.target, null))
+                    repoNode.add(
+                        DefaultMutableTreeNode(
+                            RepoIssueTreeItem.Message(result.message)
+                        )
                     )
-                )
-                rootNode.add(repoNode)
+                    rootNode.add(repoNode)
+                }
+                is RepoLoadResult.HiddenFork -> hiddenForks += 1
+                is RepoLoadResult.HiddenNotOwned -> hiddenNonOwned += 1
             }
         }
 
+        if (rootNode.childCount == 0) {
+            rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No owned GitHub repositories to track")))
+        }
+        hasVisibleTargets = visibleTargets.isNotEmpty()
+        if (selectedTarget !in visibleTargets) {
+            visibleTargets.firstOrNull()?.let { selectedTarget = it }
+        }
         treeModel.reload()
         expandRepositoryNodes()
-        status.text = statusText(total, failures)
+        status.text = statusText(total, failures, hiddenForks, hiddenNonOwned)
         status.foreground = if (failures == 0) UIUtil.getContextHelpForeground() else UIUtil.getErrorForeground()
+        syncButtons()
     }
 
     private fun handleSelection(path: TreePath?): Unit {
@@ -242,16 +290,20 @@ internal class RepoIssuesTreePanel(
         }
     }
 
-    private fun statusText(total: Int, failures: Int): String =
-        if (failures == 0) {
-            "$total open"
-        } else {
-            "$total open, $failures failed"
-        }
+    private fun statusText(total: Int, failures: Int, hiddenForks: Int, hiddenNonOwned: Int): String =
+        listOfNotNull(
+            "$total open",
+            if (hiddenForks > 0) "$hiddenForks forks hidden" else null,
+            if (hiddenNonOwned > 0) "$hiddenNonOwned not owned hidden" else null,
+            if (failures > 0) "$failures failed" else null
+        ).joinToString(", ")
+
+    private fun selectedSortOption(): IssueSortOption =
+        sortBox.selectedItem as? IssueSortOption ?: IssueSortOption.UPDATED_DESC
 
     private fun syncButtons(): Unit {
         openIssueButton.isEnabled = selectedIssue != null
-        openRepoButton.isEnabled = selectedTarget.issuesUrl.isNotBlank()
+        openRepoButton.isEnabled = hasVisibleTargets && selectedTarget.issuesUrl.isNotBlank()
     }
 
     private fun String.escapeHtml(): String =
@@ -264,6 +316,26 @@ internal class RepoIssuesTreePanel(
         val body: String,
         val renderedComments: List<String>
     )
+
+    private sealed interface RepoLoadResult {
+        data class Loaded(
+            val target: RepoIssueTarget,
+            val issues: List<Issue>
+        ) : RepoLoadResult
+
+        data class Failed(
+            val target: RepoIssueTarget,
+            val message: String
+        ) : RepoLoadResult
+
+        data class HiddenFork(
+            val target: RepoIssueTarget
+        ) : RepoLoadResult
+
+        data class HiddenNotOwned(
+            val target: RepoIssueTarget
+        ) : RepoLoadResult
+    }
 }
 
 internal sealed interface RepoIssueTreeItem {

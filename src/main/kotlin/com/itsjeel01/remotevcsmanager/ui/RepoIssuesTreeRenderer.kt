@@ -38,6 +38,9 @@ internal class RepoIssuesTreeRenderer : ColoredTreeCellRenderer() {
     private fun renderIssue(issue: Issue): Unit {
         append("#${issue.number} ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         append(issue.title, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+        issue.milestone?.takeIf { it.isNotBlank() }?.let {
+            append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
         append("  ${TimeFormat.relative(issue.updatedAt)}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         toolTipText = issue.url
     }
