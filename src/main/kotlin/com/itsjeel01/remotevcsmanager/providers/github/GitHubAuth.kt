@@ -62,7 +62,7 @@ class GitHubAuth {
      * Get the authorization header value for API calls.
      */
     fun getAuthorizationHeader(): String? {
-        val token = getToken() ?: return null
+        val token = getToken()?.takeIf { it.isNotBlank() } ?: return null
         return "$TOKEN_PREFIX$token"
     }
 }

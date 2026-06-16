@@ -91,7 +91,7 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", ACCEPT_HEADER)
-            .addHeader("Authorization", auth.getAuthorizationHeader() ?: "")
+            .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .get()
             .build()
@@ -107,7 +107,7 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", accept)
-            .addHeader("Authorization", auth.getAuthorizationHeader() ?: "")
+            .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .post(requestBody ?: "".toRequestBody(JSON_MEDIA_TYPE))
             .build()
@@ -122,10 +122,15 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", ACCEPT_HEADER)
-            .addHeader("Authorization", auth.getAuthorizationHeader() ?: "")
+            .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .patch(requestBody)
             .build()
+    }
+
+    private fun Request.Builder.addAuthorizationHeader(): Request.Builder {
+        auth.getAuthorizationHeader()?.let { addHeader("Authorization", it) }
+        return this
     }
 
     /**
