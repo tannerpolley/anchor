@@ -1,6 +1,5 @@
 package com.itsjeel01.remotevcsmanager.ui
 
-import androidx.compose.ui.awt.ComposePanel
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
@@ -14,11 +13,7 @@ class RemoteVcsToolWindowFactory : ToolWindowFactory, DumbAware {
         val icon = IconLoader.getIcon("/META-INF/toolWindow.svg", javaClass)
         toolWindow.setIcon(icon)
 
-        val panel = ComposePanel()
-        panel.setContent {
-            RemoteVcsToolWindowContent(project)
-        }
-
+        val panel = RemoteVcsIssuesPanel.create(project)
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         toolWindow.contentManager.addContent(content)
     }
