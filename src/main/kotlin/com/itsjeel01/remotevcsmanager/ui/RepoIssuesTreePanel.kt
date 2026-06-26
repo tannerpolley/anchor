@@ -196,8 +196,18 @@ internal class RepoIssuesTreePanel(
                     if (issues.isEmpty()) {
                         repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
                     } else {
-                        issues.forEach { issue ->
-                            repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.IssueNode(target, issue)))
+                        IssueMilestoneGrouping.group(issues).forEach { milestone ->
+                            val milestoneNode = DefaultMutableTreeNode(
+                                RepoIssueTreeItem.Milestone(
+                                    target = target,
+                                    title = milestone.title,
+                                    openIssueCount = milestone.issues.size
+                                )
+                            )
+                            milestone.issues.forEach { issue ->
+                                milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.IssueNode(target, issue)))
+                            }
+                            repoNode.add(milestoneNode)
                         }
                     }
                     rootNode.add(repoNode)
@@ -241,6 +251,12 @@ internal class RepoIssuesTreePanel(
                 detailRequests.incrementAndGet()
                 detailRenderer.showPlaceholder("Select an issue under ${item.target.displayName}.")
             }
+            is RepoIssueTreeItem.Milestone -> {
+                selectedTarget = item.target
+                selectedIssue = null
+                detailRequests.incrementAndGet()
+                detailRenderer.showPlaceholder("Select an issue under ${item.title}.")
+            }
             is RepoIssueTreeItem.IssueNode -> {
                 selectedTarget = item.target
                 selectedIssue = item.issue
@@ -283,9 +299,19 @@ internal class RepoIssuesTreePanel(
     }
 
     private fun expandRepositoryNodes(): Unit {
+        val expandedFirstMilestones = mutableSetOf<String>()
         var row = 0
         while (row < tree.rowCount) {
-            tree.expandRow(row)
+            val path = tree.getPathForRow(row)
+            val item = (path?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+            when (item) {
+                is RepoIssueTreeItem.Repository -> tree.expandPath(path)
+                is RepoIssueTreeItem.Milestone -> {
+                    if (expandedFirstMilestones.add(item.target.issuesUrl)) {
+                        tree.expandPath(path)
+                    }
+                }
+            }
             row += 1
         }
     }
@@ -347,6 +373,12 @@ internal sealed interface RepoIssueTreeItem {
     data class IssueNode(
         val target: RepoIssueTarget,
         val issue: Issue
+    ) : RepoIssueTreeItem
+
+    data class Milestone(
+        val target: RepoIssueTarget,
+        val title: String,
+        val openIssueCount: Int
     ) : RepoIssueTreeItem
 
     data class Message(

@@ -20,6 +20,7 @@ internal class RepoIssuesTreeRenderer : ColoredTreeCellRenderer() {
         val node = value as? DefaultMutableTreeNode
         when (val item = node?.userObject) {
             is RepoIssueTreeItem.Repository -> renderRepository(item)
+            is RepoIssueTreeItem.Milestone -> renderMilestone(item)
             is RepoIssueTreeItem.IssueNode -> renderIssue(item.issue)
             is RepoIssueTreeItem.Message -> append(item.text, SimpleTextAttributes.GRAYED_ATTRIBUTES)
             else -> append("GitHub Issues")
@@ -35,12 +36,15 @@ internal class RepoIssuesTreeRenderer : ColoredTreeCellRenderer() {
         toolTipText = item.target.rootPath
     }
 
+    private fun renderMilestone(item: RepoIssueTreeItem.Milestone): Unit {
+        append(item.title, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+        append("  ${item.openIssueCount} open", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        toolTipText = item.target.displayName
+    }
+
     private fun renderIssue(issue: Issue): Unit {
         append("#${issue.number} ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         append(issue.title, SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        issue.milestone?.takeIf { it.isNotBlank() }?.let {
-            append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-        }
         append("  ${TimeFormat.relative(issue.updatedAt)}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         toolTipText = issue.url
     }
