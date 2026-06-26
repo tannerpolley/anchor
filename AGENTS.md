@@ -34,6 +34,13 @@ com.itsjeel01.remotevcsmanager/
 └── RemoteVcsManagerPlugin.kt
 ```
 
+## Superpowers Project
+
+- Roadmap and tracker context lives in `docs/superpowers/PROJECT_CONTEXT.md`.
+- Canonical artifact roots are `docs/superpowers/specs`, `docs/superpowers/plans`, and `docs/superpowers/issues`.
+- Milestone files under `docs/superpowers/milestones` are index views only; do not create nested canonical specs, plans, or issues there.
+- Use `$superpowers-project:setup-project` to maintain project setup, `$superpowers-project:brainstorm-spec` for specs, `$superpowers-project:write-plan` for implementation plans, and `$superpowers-project:create-issues` for GitHub issue mirrors.
+
 ## Rules
 
 ### Kotlin Style
