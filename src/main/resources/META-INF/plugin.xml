@@ -62,6 +62,9 @@
                 icon="/META-INF/toolWindow.svg"
                 factoryClass="com.itsjeel01.remotevcsmanager.ui.RemoteVcsToolWindowFactory"/>
 
+        <fileEditorProvider
+                implementation="com.itsjeel01.remotevcsmanager.ui.editor.AnchorIssueFileEditorProvider"/>
+
         <postStartupActivity
                 implementation="com.itsjeel01.remotevcsmanager.RemoteVcsManagerProjectActivity"/>
     </extensions>
