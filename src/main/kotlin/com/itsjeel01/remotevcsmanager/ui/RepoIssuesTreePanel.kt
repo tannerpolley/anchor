@@ -10,9 +10,8 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.itsjeel01.remotevcsmanager.models.Issue
-import com.itsjeel01.remotevcsmanager.models.IssueComment
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
-import com.itsjeel01.remotevcsmanager.ui.detail.SwingIssueDetailRenderer
+import com.itsjeel01.remotevcsmanager.ui.editor.IssueEditorPreviewOpener
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.Font
@@ -21,7 +20,6 @@ import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.JSplitPane
 import javax.swing.SwingUtilities
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -33,7 +31,7 @@ internal class RepoIssuesTreePanel(
     private val provider: GitHubProvider,
     private val targets: List<RepoIssueTarget>,
     private val accountLogins: Set<String>,
-    private val detailRenderer: SwingIssueDetailRenderer
+    private val previewOpener: IssueEditorPreviewOpener
 ) {
 
     private val rootNode = DefaultMutableTreeNode("GitHub Issues")
@@ -43,7 +41,6 @@ internal class RepoIssuesTreePanel(
     private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
-    private val detailRequests = AtomicLong()
     private val treeRequests = AtomicLong()
     private var selectedTarget: RepoIssueTarget = targets.first()
     private var selectedIssue: Issue? = null
@@ -59,7 +56,7 @@ internal class RepoIssuesTreePanel(
     private fun createComponent(): JComponent {
         val panel = JBPanel<JBPanel<*>>(BorderLayout())
         panel.add(createHeader(), BorderLayout.NORTH)
-        panel.add(createSplitPane(), BorderLayout.CENTER)
+        panel.add(JBScrollPane(tree), BorderLayout.CENTER)
         return panel
     }
 
@@ -99,17 +96,6 @@ internal class RepoIssuesTreePanel(
         return header
     }
 
-    private fun createSplitPane(): JComponent =
-        JSplitPane(
-            JSplitPane.HORIZONTAL_SPLIT,
-            JBScrollPane(tree),
-            detailRenderer.component
-        ).apply {
-            border = JBUI.Borders.empty()
-            resizeWeight = 0.34
-            dividerLocation = JBUI.scale(390)
-        }
-
     private fun configureTree(): Unit {
         tree.isRootVisible = false
         tree.showsRootHandles = true
@@ -124,12 +110,11 @@ internal class RepoIssuesTreePanel(
     private fun reloadIssues(): Unit {
         val requestId = treeRequests.incrementAndGet()
         val sortOption = selectedSortOption()
-        detailRequests.incrementAndGet()
+        previewOpener.cancelPendingLoad()
         selectedIssue = null
         syncButtons()
         status.text = "Loading ${targets.size} repos..."
         status.foreground = UIUtil.getContextHelpForeground()
-        detailRenderer.showPlaceholder("Select an issue under a repository to read its body and comments.")
         showLoadingNodes()
 
         ApplicationManager.getApplication().executeOnPooledThread {
@@ -248,54 +233,21 @@ internal class RepoIssuesTreePanel(
             is RepoIssueTreeItem.Repository -> {
                 selectedTarget = item.target
                 selectedIssue = null
-                detailRequests.incrementAndGet()
-                detailRenderer.showPlaceholder("Select an issue under ${item.target.displayName}.")
+                previewOpener.cancelPendingLoad()
             }
             is RepoIssueTreeItem.Milestone -> {
                 selectedTarget = item.target
                 selectedIssue = null
-                detailRequests.incrementAndGet()
-                detailRenderer.showPlaceholder("Select an issue under ${item.title}.")
+                previewOpener.cancelPendingLoad()
             }
             is RepoIssueTreeItem.IssueNode -> {
                 selectedTarget = item.target
                 selectedIssue = item.issue
-                loadIssueDetail(item.target, item.issue)
+                previewOpener.openIssue(item.target, item.issue)
             }
             else -> selectedIssue = null
         }
         syncButtons()
-    }
-
-    private fun loadIssueDetail(target: RepoIssueTarget, issue: Issue): Unit {
-        val requestId = detailRequests.incrementAndGet()
-        detailRenderer.showLoading(issue)
-        ApplicationManager.getApplication().executeOnPooledThread {
-            val result = runCatching {
-                runBlocking {
-                    val context = "${target.owner}/${target.repoName}"
-                    val comments = provider.getIssueComments(target.owner, target.repoName, issue.number)
-                    val body = renderMarkdown(issue.body.orEmpty(), context)
-                    val renderedComments = comments.map { renderMarkdown(it.body, context) }
-                    IssueDetail(comments, body, renderedComments)
-                }
-            }
-
-            SwingUtilities.invokeLater {
-                if (project.isDisposed || detailRequests.get() != requestId) return@invokeLater
-                result.onSuccess { detail ->
-                    detailRenderer.showIssue(issue, detail.comments, detail.body, detail.renderedComments)
-                }.onFailure { error ->
-                    detailRenderer.showError(issue, error.message ?: "GitHub API request failed")
-                }
-            }
-        }
-    }
-
-    private suspend fun renderMarkdown(markdown: String, context: String): String {
-        if (markdown.isBlank()) return "<p><em>No description provided.</em></p>"
-        val rendered = provider.renderMarkdown(markdown, context)
-        return if (rendered == markdown) "<pre>${markdown.escapeHtml()}</pre>" else rendered
     }
 
     private fun expandRepositoryNodes(): Unit {
@@ -331,17 +283,6 @@ internal class RepoIssuesTreePanel(
         openIssueButton.isEnabled = selectedIssue != null
         openRepoButton.isEnabled = hasVisibleTargets && selectedTarget.issuesUrl.isNotBlank()
     }
-
-    private fun String.escapeHtml(): String =
-        replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-
-    private data class IssueDetail(
-        val comments: List<IssueComment>,
-        val body: String,
-        val renderedComments: List<String>
-    )
 
     private sealed interface RepoLoadResult {
         data class Loaded(

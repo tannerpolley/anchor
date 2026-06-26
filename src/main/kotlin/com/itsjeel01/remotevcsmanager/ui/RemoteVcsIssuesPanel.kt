@@ -1,7 +1,6 @@
 package com.itsjeel01.remotevcsmanager.ui
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.JBUI
 import com.itsjeel01.remotevcsmanager.GitRemoteDetector
@@ -10,7 +9,7 @@ import com.itsjeel01.remotevcsmanager.GitRootDiscovery
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubAuth
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.providers.github.JetBrainsGithubTokenProvider
-import com.itsjeel01.remotevcsmanager.ui.detail.SwingIssueDetailRenderer
+import com.itsjeel01.remotevcsmanager.ui.editor.IssueEditorPreviewOpener
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JTextArea
@@ -28,15 +27,14 @@ object RemoteVcsIssuesPanel {
             return panel
         }
 
-        val detailRenderer = SwingIssueDetailRenderer()
-        Disposer.register(project, detailRenderer)
+        val provider = createProvider(project)
 
         val treePanel = RepoIssuesTreePanel(
             project = project,
-            provider = createProvider(project),
+            provider = provider,
             targets = targets,
             accountLogins = accountLogins,
-            detailRenderer = detailRenderer
+            previewOpener = IssueEditorPreviewOpener(project, provider)
         )
         panel.add(treePanel.component, BorderLayout.CENTER)
         return panel

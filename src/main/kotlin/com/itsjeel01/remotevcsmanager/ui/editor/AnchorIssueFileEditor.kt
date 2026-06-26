@@ -1,5 +1,6 @@
 package com.itsjeel01.remotevcsmanager.ui.editor
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorState
@@ -20,14 +21,19 @@ class AnchorIssueFileEditor(
 ) : UserDataHolderBase(), FileEditor {
 
     private val root = JBPanel<JBPanel<*>>(BorderLayout())
-    private val payload = checkNotNull(AnchorIssuePreviewStore.get(file)) {
+    private var payload = checkNotNull(AnchorIssuePreviewStore.get(file)) {
         "Anchor issue preview payload missing for ${file.presentableName}"
     }
     private val browser: JBCefBrowser?
+    private val storeSubscription: Disposable
 
     init {
         val result = JcefDiagnostics.createBrowser()
         browser = result.browser
+        storeSubscription = AnchorIssuePreviewStore.subscribe(file) { nextPayload ->
+            payload = nextPayload
+            browser?.loadHTML(nextPayload.html)
+        }
         if (browser != null) {
             root.add(browser.component, BorderLayout.CENTER)
             browser.loadHTML(payload.html)
@@ -56,6 +62,7 @@ class AnchorIssueFileEditor(
 
     override fun dispose(): Unit {
         browser?.let { Disposer.dispose(it) }
+        storeSubscription.dispose()
     }
 
     private fun createMessagePanel(message: String): JComponent {

@@ -38,6 +38,24 @@ class AnchorIssueVirtualFileTest {
     }
 
     @Test
+    fun previewStoreNotifiesActiveSubscribers(): Unit {
+        val file = AnchorIssueVirtualFile("github", "octo", "repo", 44, "Issue title")
+        val first = AnchorIssuePreviewPayload(title = "First", html = "<p>first</p>")
+        val second = AnchorIssuePreviewPayload(title = "Second", html = "<p>second</p>")
+        val third = AnchorIssuePreviewPayload(title = "Third", html = "<p>third</p>")
+        val observed = mutableListOf<AnchorIssuePreviewPayload>()
+
+        val subscription = AnchorIssuePreviewStore.subscribe(file) { observed.add(it) }
+
+        AnchorIssuePreviewStore.put(file, first)
+        AnchorIssuePreviewStore.put(file, second)
+        subscription.dispose()
+        AnchorIssuePreviewStore.put(file, third)
+
+        assertEquals(listOf(first, second), observed)
+    }
+
+    @Test
     fun issueFileRequiresTitle(): Unit {
         assertFailsWith<IllegalArgumentException> {
             AnchorIssueVirtualFile("github", "octo", "repo", 42, "")
