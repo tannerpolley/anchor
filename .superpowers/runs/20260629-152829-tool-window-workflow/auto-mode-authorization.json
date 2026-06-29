@@ -1,0 +1,35 @@
+{
+  "question_id": "project_auto_mode_authorization",
+  "source": "request_user_input",
+  "selected_authority": "bounded-auto-merge",
+  "source_spec": "docs/superpowers/specs/2026-06-29-tool-window-navigation-refresh-design.md",
+  "route_policy": {
+    "selected_mode": "agent-chooses",
+    "issue_route": "direct-inline-resolve-issue"
+  },
+  "decision_policy": {
+    "selected_mode": "recorded-defaults",
+    "stop_outside_policy": true
+  },
+  "merge_permission": {
+    "selected_mode": "preauthorized-after-clean-premerge",
+    "require_clean_premerge": true
+  },
+  "mutation_scope": [
+    "current-repo",
+    "development-branch"
+  ],
+  "required_proof": [
+    "plan-proof-oracle",
+    "verification-receipts",
+    "cleanup-hook",
+    "premerge-proof",
+    "closeout-proof"
+  ],
+  "stop_conditions": [
+    "missing-proof",
+    "dirty-unsafe-state",
+    "failed-validation",
+    "decision-outside-policy"
+  ]
+}

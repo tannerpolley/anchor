@@ -1,0 +1,14 @@
+{
+  "schema": "superpowers-project.workflow-mode-ledger.v1",
+  "run_id": "20260629-152829-tool-window-workflow",
+  "question_id": "project_workflow_mode",
+  "source": "request_user_input",
+  "selected_mode": "auto",
+  "route_policy": {
+    "selected_route": "superpowers-project:brainstorm-spec",
+    "scope": "one-route autonomy with validator-backed proof",
+    "must_stop_at_route_closeout": true,
+    "visual_companion": "declined",
+    "user_added_brainstorm_requirement": "Track parent issues and nest sub-issues under parent issue dropdowns in the tool window."
+  }
+}
