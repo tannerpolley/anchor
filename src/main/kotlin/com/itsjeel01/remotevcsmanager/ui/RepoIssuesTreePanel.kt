@@ -13,9 +13,11 @@ import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.editor.IssueEditorPreviewOpener
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.FlowLayout
 import java.awt.Font
 import java.util.concurrent.atomic.AtomicLong
+import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -29,7 +31,9 @@ import kotlinx.coroutines.runBlocking
 internal class RepoIssuesTreePanel(
     private val project: Project,
     private val provider: GitHubProvider,
-    private val targets: List<RepoIssueTarget>,
+    private val allTargets: List<RepoIssueTarget>,
+    initialInclusionState: RepoIssueInclusionState,
+    private val onInclusionChanged: (RepoIssueInclusionState) -> Unit,
     private val accountLogins: Set<String>,
     private val previewOpener: IssueEditorPreviewOpener
 ) {
@@ -39,10 +43,13 @@ internal class RepoIssuesTreePanel(
     private val tree = Tree(treeModel)
     private val status = JBLabel()
     private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
+    private val reposButton = JButton("Repos")
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
     private val treeRequests = AtomicLong()
-    private var selectedTarget: RepoIssueTarget = targets.first()
+    private var inclusionState = initialInclusionState
+    private var targets: List<RepoIssueTarget> = inclusionState.includedTargets(allTargets)
+    private var selectedTarget: RepoIssueTarget? = targets.firstOrNull() ?: allTargets.firstOrNull()
     private var selectedIssue: Issue? = null
     private var hasVisibleTargets = targets.isNotEmpty()
 
@@ -61,17 +68,27 @@ internal class RepoIssuesTreePanel(
     }
 
     private fun createHeader(): JComponent {
-        val header = JBPanel<JBPanel<*>>(BorderLayout())
+        val header = JBPanel<JBPanel<*>>()
+        header.layout = BoxLayout(header, BoxLayout.Y_AXIS)
         header.border = JBUI.Borders.emptyBottom(8)
 
+        val titleRow = JBPanel<JBPanel<*>>(BorderLayout()).apply {
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
         val title = JBLabel("GitHub Issues").apply {
             font = font.deriveFont(Font.BOLD)
         }
-        header.add(title, BorderLayout.WEST)
+        titleRow.add(title, BorderLayout.WEST)
+        header.add(titleRow)
 
-        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0))
+        val actions = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
         val refresh = JButton("Refresh").apply {
             addActionListener { reloadIssues() }
+        }
+        reposButton.apply {
+            addActionListener { showRepositorySelectionDialog() }
         }
         openIssueButton.apply {
             isEnabled = false
@@ -80,7 +97,7 @@ internal class RepoIssuesTreePanel(
             }
         }
         openRepoButton.apply {
-            addActionListener { BrowserUtil.browse(selectedTarget.issuesUrl) }
+            addActionListener { selectedTarget?.let { BrowserUtil.browse(it.issuesUrl) } }
         }
         sortBox.apply {
             addActionListener { reloadIssues() }
@@ -89,10 +106,11 @@ internal class RepoIssuesTreePanel(
         actions.add(status)
         actions.add(JBLabel("Sort:"))
         actions.add(sortBox)
+        actions.add(reposButton)
         actions.add(refresh)
         actions.add(openIssueButton)
         actions.add(openRepoButton)
-        header.add(actions, BorderLayout.EAST)
+        header.add(actions)
         return header
     }
 
@@ -113,6 +131,14 @@ internal class RepoIssuesTreePanel(
         previewOpener.cancelPendingLoad()
         selectedIssue = null
         syncButtons()
+        if (targets.isEmpty()) {
+            hasVisibleTargets = false
+            status.text = "0 selected"
+            status.foreground = UIUtil.getContextHelpForeground()
+            showNoSelectedNodes()
+            syncButtons()
+            return
+        }
         status.text = "Loading ${targets.size} repos..."
         status.foreground = UIUtil.getContextHelpForeground()
         showLoadingNodes()
@@ -217,14 +243,32 @@ internal class RepoIssuesTreePanel(
             rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No owned GitHub repositories to track")))
         }
         hasVisibleTargets = visibleTargets.isNotEmpty()
-        if (selectedTarget !in visibleTargets) {
-            visibleTargets.firstOrNull()?.let { selectedTarget = it }
+        if (selectedTarget == null || selectedTarget !in visibleTargets) {
+            selectedTarget = visibleTargets.firstOrNull()
         }
         treeModel.reload()
         expandRepositoryNodes()
         status.text = statusText(total, failures, hiddenForks, hiddenNonOwned)
         status.foreground = if (failures == 0) UIUtil.getContextHelpForeground() else UIUtil.getErrorForeground()
         syncButtons()
+    }
+
+    private fun showRepositorySelectionDialog(): Unit {
+        val dialog = RepositoryInclusionDialog(project, allTargets, inclusionState)
+        if (!dialog.showAndGet()) return
+
+        inclusionState = dialog.selectedState()
+        onInclusionChanged(inclusionState)
+        targets = inclusionState.includedTargets(allTargets)
+        selectedTarget = targets.firstOrNull() ?: allTargets.firstOrNull()
+        hasVisibleTargets = targets.isNotEmpty()
+        reloadIssues()
+    }
+
+    private fun showNoSelectedNodes(): Unit {
+        rootNode.removeAllChildren()
+        rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No repositories selected")))
+        treeModel.reload()
     }
 
     private fun handleSelection(path: TreePath?): Unit {
@@ -281,7 +325,7 @@ internal class RepoIssuesTreePanel(
 
     private fun syncButtons(): Unit {
         openIssueButton.isEnabled = selectedIssue != null
-        openRepoButton.isEnabled = hasVisibleTargets && selectedTarget.issuesUrl.isNotBlank()
+        openRepoButton.isEnabled = hasVisibleTargets && selectedTarget?.issuesUrl?.isNotBlank() == true
     }
 
     private sealed interface RepoLoadResult {

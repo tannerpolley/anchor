@@ -18,21 +18,29 @@ object RemoteVcsIssuesPanel {
 
     fun create(project: Project): JComponent {
         val accountLogins = JetBrainsGithubTokenProvider.getAccountLogins(project)
-        val targets = if (accountLogins.isEmpty()) emptyList() else resolveTargets(project)
         val panel = JBPanel<JBPanel<*>>(BorderLayout())
         panel.border = JBUI.Borders.empty(8)
 
+        if (accountLogins.isEmpty()) {
+            panel.add(createMessagePanel(emptyTargetsMessage(accountLogins)), BorderLayout.CENTER)
+            return panel
+        }
+
+        val targets = resolveTargets(project)
         if (targets.isEmpty()) {
             panel.add(createMessagePanel(emptyTargetsMessage(accountLogins)), BorderLayout.CENTER)
             return panel
         }
 
         val provider = createProvider(project)
+        val inclusionSettings = RepoIssueInclusionSettings.getInstance(project)
 
         val treePanel = RepoIssuesTreePanel(
             project = project,
             provider = provider,
-            targets = targets,
+            allTargets = targets,
+            initialInclusionState = inclusionSettings.inclusionState(),
+            onInclusionChanged = inclusionSettings::setInclusionState,
             accountLogins = accountLogins,
             previewOpener = IssueEditorPreviewOpener(project, provider)
         )
