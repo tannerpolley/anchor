@@ -23,14 +23,15 @@ class AnchorIssueVirtualFile(
     }
 
     private val content = "# $title\n".toByteArray(StandardCharsets.UTF_8)
+    private val modificationStamp = content.contentHashCode().toLong()
 
-    override fun getName(): String = "$repo#$issueNumber.md"
+    override fun getName(): String = "$repo#$issueNumber.anchor-issue"
 
-    override fun getPresentableName(): String = "$owner/$repo#$issueNumber.md"
+    override fun getPresentableName(): String = "$owner/$repo#$issueNumber"
 
     override fun getFileSystem(): VirtualFileSystem = AnchorIssueVirtualFileSystem
 
-    override fun getPath(): String = "${AnchorIssueVirtualFileSystem.PROTOCOL}://$provider/$owner/$repo/$issueNumber.md"
+    override fun getPath(): String = "${AnchorIssueVirtualFileSystem.PROTOCOL}://$provider/$owner/$repo/$issueNumber"
 
     override fun isWritable(): Boolean = false
 
@@ -48,6 +49,8 @@ class AnchorIssueVirtualFile(
     override fun contentsToByteArray(): ByteArray = content
 
     override fun getTimeStamp(): Long = 0L
+
+    override fun getModificationStamp(): Long = modificationStamp
 
     override fun getLength(): Long = content.size.toLong()
 

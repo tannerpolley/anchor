@@ -13,8 +13,9 @@ class AnchorIssueVirtualFileTest {
         val second = AnchorIssueVirtualFile("github", "octo", "repo", 42, "Issue title")
 
         assertEquals(first.path, second.path)
-        assertEquals("octo/repo#42.md", first.presentableName)
-        assertEquals("repo#42.md", first.name)
+        assertEquals("octo/repo#42", first.presentableName)
+        assertEquals("repo#42.anchor-issue", first.name)
+        assertEquals("anchor-issue://github/octo/repo/42", first.path)
     }
 
     @Test
@@ -23,6 +24,23 @@ class AnchorIssueVirtualFileTest {
         val second = AnchorIssueVirtualFile("github", "octo", "repo", 43, "Issue title")
 
         assertNotEquals(first.path, second.path)
+    }
+
+    @Test
+    fun issueFileSupportsEditorDocumentMetadata(): Unit {
+        val file = AnchorIssueVirtualFile("github", "octo", "repo", 42, "Issue title")
+
+        assertEquals("# Issue title\n".toByteArray().contentHashCode().toLong(), file.modificationStamp)
+        assertEquals("# Issue title\n".toByteArray().size.toLong(), file.length)
+        assertEquals(0L, file.timeStamp)
+    }
+
+    @Test
+    fun issueFileDoesNotUseMarkdownExtension(): Unit {
+        val file = AnchorIssueVirtualFile("github", "octo", "repo", 42, "Issue title")
+
+        assertEquals(false, file.name.endsWith(".md"))
+        assertEquals(false, file.path.endsWith(".md"))
     }
 
     @Test

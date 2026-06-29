@@ -48,6 +48,8 @@ class AnchorIssueFileEditor(
 
     override fun getName(): String = payload.title
 
+    override fun getFile(): AnchorIssueVirtualFile = file
+
     override fun setState(state: FileEditorState) = Unit
 
     override fun isModified(): Boolean = false
