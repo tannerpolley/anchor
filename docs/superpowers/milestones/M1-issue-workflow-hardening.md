@@ -18,13 +18,16 @@ Make Anchor's issue workflow reliable for real multi-repository IDE projects. Th
 - [Issue editor preview plan](../plans/2026-06-26-m1-issue-editor-preview-plan.md)
 - [Tool window navigation refresh plan](../plans/2026-06-29-m1-tool-window-navigation-refresh-plan.md)
 
-## Related Issues
+## Open Issues
 
 - [#1 Render GitHub issues in editor preview and group by milestone](../issues/1-render-github-issues-in-editor-preview-and-group-by-milestone.md)
-- [#2 Fix issue tool-window header overlap and repo inclusion controls](../issues/2-fix-issue-tool-window-header-overlap-and-repo-inclusion-controls.md)
 - [#3 Load GitHub milestones and issue relationships](../issues/3-load-github-milestones-and-issue-relationships.md)
 - [#4 Group issue tree by milestones, parent issues, and sub-issues](../issues/4-group-issue-tree-by-milestones-parent-issues-and-sub-issues.md)
 - [#5 Wire complete issue tree rendering and Workspace proof](../issues/5-wire-complete-issue-tree-rendering-and-workspace-proof.md)
+
+## Closed Issues
+
+- [#2 Fix issue tool-window header overlap and repo inclusion controls](https://github.com/tannerpolley/anchor/issues/2) closed by [PR #6](https://github.com/tannerpolley/anchor/pull/6) on 2026-06-30: stabilized the issue tool-window header and added per-project repository inclusion controls.
 
 ## Success Criteria
 
