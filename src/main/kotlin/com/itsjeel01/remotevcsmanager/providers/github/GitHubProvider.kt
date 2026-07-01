@@ -4,6 +4,8 @@ import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.GitBranch
 import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
+import com.itsjeel01.remotevcsmanager.models.IssueMilestone
+import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.models.Label
 import com.itsjeel01.remotevcsmanager.models.PRState
@@ -66,6 +68,11 @@ class GitHubProvider(
         return apiClient.getPullRequests(owner, repo, state).getOrThrow().map { json -> toPullRequest(json) }
     }
 
+    override suspend fun getMilestones(owner: String, repo: String): List<IssueMilestone> =
+        apiClient.getMilestones(owner, repo).getOrThrow().map { json ->
+            GitHubIssueStructureParser.toMilestone(json)
+        }
+
     override suspend fun getIssues(
         owner: String,
         repo: String,
@@ -90,6 +97,19 @@ class GitHubProvider(
             .map { json -> toIssue(json) }
             .filter { !it.isPullRequest }
     }
+
+    override suspend fun getIssueRelationships(
+        owner: String,
+        repo: String,
+        issues: List<Issue>
+    ): List<IssueRelationship> =
+        issues.flatMap { issue ->
+            val subIssues = apiClient.getSubIssues(owner, repo, issue.number).getOrThrow()
+            val jsonArray = com.google.gson.JsonArray().apply {
+                subIssues.forEach { add(it) }
+            }
+            GitHubIssueStructureParser.toIssueRelationships(issue.number, jsonArray)
+        }
 
     suspend fun getIssueTrackingAccess(
         owner: String,

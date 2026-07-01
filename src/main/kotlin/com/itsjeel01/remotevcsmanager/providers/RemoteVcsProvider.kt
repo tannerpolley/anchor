@@ -4,6 +4,8 @@ import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.GitBranch
 import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
+import com.itsjeel01.remotevcsmanager.models.IssueMilestone
+import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 import com.itsjeel01.remotevcsmanager.models.Label
 import com.itsjeel01.remotevcsmanager.models.PullRequest
 import com.itsjeel01.remotevcsmanager.models.RemoteAccount
@@ -27,7 +29,7 @@ abstract class RemoteVcsProvider {
     abstract suspend fun getRepository(owner: String, repo: String): RemoteRepository
     abstract suspend fun createRepository(name: String, description: String?, isPrivate: Boolean): RemoteRepository
     abstract suspend fun getPullRequests(owner: String, repo: String, state: String = "open"): List<PullRequest>
-
+    abstract suspend fun getMilestones(owner: String, repo: String): List<IssueMilestone>
 
     abstract suspend fun getIssues(
         owner: String,
@@ -36,6 +38,12 @@ abstract class RemoteVcsProvider {
         filter: String? = null,
         labels: String? = null
     ): List<Issue>
+
+    abstract suspend fun getIssueRelationships(
+        owner: String,
+        repo: String,
+        issues: List<Issue>
+    ): List<IssueRelationship>
 
     abstract suspend fun createIssue(
         owner: String,
@@ -59,12 +67,9 @@ abstract class RemoteVcsProvider {
     abstract suspend fun addIssueComment(owner: String, repo: String, issueNumber: Int, body: String): IssueComment
     abstract suspend fun getIssueComments(owner: String, repo: String, issueNumber: Int): List<IssueComment>
 
-
     abstract suspend fun getBranches(owner: String, repo: String): List<GitBranch>
 
-
     abstract suspend fun getPullRequestCommits(owner: String, repo: String, prNumber: Int): List<CommitSummary>
-
 
     abstract suspend fun getLabels(owner: String, repo: String): List<Label>
 
