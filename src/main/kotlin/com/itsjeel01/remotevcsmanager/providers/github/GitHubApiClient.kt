@@ -79,7 +79,8 @@ class GitHubApiClient(
     companion object {
         const val API_BASE_URL = "https://api.github.com"
         const val WEB_BASE_URL = "https://github.com"
-        const val ACCEPT_HEADER = "application/vnd.github.v3+json"
+        const val ACCEPT_HEADER = "application/vnd.github+json"
+        const val API_VERSION = "2026-03-10"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 
@@ -91,6 +92,7 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", ACCEPT_HEADER)
+            .addHeader("X-GitHub-Api-Version", API_VERSION)
             .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .get()
@@ -107,6 +109,7 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", accept)
+            .addHeader("X-GitHub-Api-Version", API_VERSION)
             .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .post(requestBody ?: "".toRequestBody(JSON_MEDIA_TYPE))
@@ -122,6 +125,7 @@ class GitHubApiClient(
         return Request.Builder()
             .url(url)
             .addHeader("Accept", ACCEPT_HEADER)
+            .addHeader("X-GitHub-Api-Version", API_VERSION)
             .addAuthorizationHeader()
             .addHeader("User-Agent", "RemoteVcsManager-JetBrains-Plugin")
             .patch(requestBody)
@@ -273,6 +277,70 @@ class GitHubApiClient(
         }
 
         return Result.success(issues)
+    }
+
+    /**
+     * List milestones for a repository.
+     */
+    fun getMilestones(
+        owner: String,
+        repo: String,
+        state: String = "all"
+    ): Result<List<JsonObject>> {
+        val milestones = mutableListOf<JsonObject>()
+        var page = 1
+        var hasMore = true
+
+        while (hasMore) {
+            val path = "/repos/${encodePath(owner)}/${encodePath(repo)}/milestones" +
+                "?state=$state&per_page=100&page=$page"
+            val request = buildGetRequest(path)
+            val result = executeRequest(request)
+            if (result.isFailure) {
+                val ex = result.exceptionOrNull()
+                return Result.failure(ex ?: Exception("Failed to fetch milestones"))
+            }
+
+            val pageMilestones = parseJson(result.getOrNull().orEmpty()).asJsonArray
+            if (pageMilestones.size() == 0) {
+                hasMore = false
+            } else {
+                pageMilestones.forEach { milestones.add(it.asJsonObject) }
+                page += 1
+            }
+        }
+
+        return Result.success(milestones)
+    }
+
+    /**
+     * List direct sub-issues for an issue.
+     */
+    fun getSubIssues(owner: String, repo: String, issueNumber: Int): Result<List<JsonObject>> {
+        val subIssues = mutableListOf<JsonObject>()
+        var page = 1
+        var hasMore = true
+
+        while (hasMore) {
+            val path = "/repos/${encodePath(owner)}/${encodePath(repo)}/issues/$issueNumber/sub_issues" +
+                "?per_page=100&page=$page"
+            val request = buildGetRequest(path)
+            val result = executeRequest(request)
+            if (result.isFailure) {
+                val ex = result.exceptionOrNull()
+                return Result.failure(ex ?: Exception("Failed to fetch sub-issues"))
+            }
+
+            val pageSubIssues = parseJson(result.getOrNull().orEmpty()).asJsonArray
+            if (pageSubIssues.size() == 0) {
+                hasMore = false
+            } else {
+                pageSubIssues.forEach { subIssues.add(it.asJsonObject) }
+                page += 1
+            }
+        }
+
+        return Result.success(subIssues)
     }
 
     /**

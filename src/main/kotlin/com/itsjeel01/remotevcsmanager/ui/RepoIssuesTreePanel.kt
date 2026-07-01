@@ -10,6 +10,8 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.itsjeel01.remotevcsmanager.models.Issue
+import com.itsjeel01.remotevcsmanager.models.IssueMilestone
+import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.ui.editor.IssueEditorPreviewOpener
 import java.awt.BorderLayout
@@ -43,7 +45,7 @@ internal class RepoIssuesTreePanel(
     private val tree = Tree(treeModel)
     private val status = JBLabel()
     private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
-    private val reposButton = JButton("Repos")
+    private val reposButton = JButton("Repositories")
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
     private val treeRequests = AtomicLong()
@@ -72,16 +74,16 @@ internal class RepoIssuesTreePanel(
         header.layout = BoxLayout(header, BoxLayout.Y_AXIS)
         header.border = JBUI.Borders.emptyBottom(8)
 
-        val titleRow = JBPanel<JBPanel<*>>(BorderLayout()).apply {
-            alignmentX = Component.LEFT_ALIGNMENT
-        }
         val title = JBLabel("GitHub Issues").apply {
             font = font.deriveFont(Font.BOLD)
+            alignmentX = Component.LEFT_ALIGNMENT
         }
-        titleRow.add(title, BorderLayout.WEST)
-        header.add(titleRow)
+        header.add(title)
 
-        val actions = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
+        val sortRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))).apply {
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
+        val actionsRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
             alignmentX = Component.LEFT_ALIGNMENT
         }
         val refresh = JButton("Refresh").apply {
@@ -103,14 +105,15 @@ internal class RepoIssuesTreePanel(
             addActionListener { reloadIssues() }
         }
 
-        actions.add(status)
-        actions.add(JBLabel("Sort:"))
-        actions.add(sortBox)
-        actions.add(reposButton)
-        actions.add(refresh)
-        actions.add(openIssueButton)
-        actions.add(openRepoButton)
-        header.add(actions)
+        sortRow.add(status)
+        sortRow.add(JBLabel("Sort:"))
+        sortRow.add(sortBox)
+        actionsRow.add(reposButton)
+        actionsRow.add(refresh)
+        actionsRow.add(openIssueButton)
+        actionsRow.add(openRepoButton)
+        header.add(sortRow)
+        header.add(actionsRow)
         return header
     }
 
@@ -161,7 +164,19 @@ internal class RepoIssuesTreePanel(
                                     sort = sortOption.apiSort,
                                     direction = sortOption.apiDirection
                                 )
-                                RepoLoadResult.Loaded(target, sortOption.sort(issues))
+                                val sortedIssues = sortOption.sort(issues)
+                                val milestones = provider.getMilestones(target.owner, target.repoName)
+                                val relationships = provider.getIssueRelationships(
+                                    owner = target.owner,
+                                    repo = target.repoName,
+                                    issues = sortedIssues
+                                )
+                                RepoLoadResult.Loaded(
+                                    target = target,
+                                    issues = sortedIssues,
+                                    milestones = milestones,
+                                    relationships = relationships
+                                )
                             }
                         }
                     }
@@ -185,7 +200,6 @@ internal class RepoIssuesTreePanel(
             rootNode.add(repoNode)
         }
         treeModel.reload()
-        expandRepositoryNodes()
     }
 
     private fun showIssueNodes(results: List<RepoLoadResult>): Unit {
@@ -204,19 +218,28 @@ internal class RepoIssuesTreePanel(
                     visibleTargets.add(target)
                     total += issues.size
                     val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, issues.size))
-                    if (issues.isEmpty()) {
+                    val groups = IssueTreeGrouping.group(
+                        milestones = result.milestones,
+                        issues = issues,
+                        relationships = result.relationships
+                    )
+                    if (groups.isEmpty()) {
                         repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
                     } else {
-                        IssueMilestoneGrouping.group(issues).forEach { milestone ->
+                        groups.forEach { milestone ->
                             val milestoneNode = DefaultMutableTreeNode(
                                 RepoIssueTreeItem.Milestone(
                                     target = target,
                                     title = milestone.title,
-                                    openIssueCount = milestone.issues.size
+                                    openIssueCount = milestone.openIssueCount
                                 )
                             )
-                            milestone.issues.forEach { issue ->
-                                milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.IssueNode(target, issue)))
+                            if (milestone.rows.isEmpty()) {
+                                milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+                            } else {
+                                milestone.rows.forEach { row ->
+                                    milestoneNode.add(createIssueNode(target, row))
+                                }
                             }
                             repoNode.add(milestoneNode)
                         }
@@ -247,7 +270,6 @@ internal class RepoIssuesTreePanel(
             selectedTarget = visibleTargets.firstOrNull()
         }
         treeModel.reload()
-        expandRepositoryNodes()
         status.text = statusText(total, failures, hiddenForks, hiddenNonOwned)
         status.foreground = if (failures == 0) UIUtil.getContextHelpForeground() else UIUtil.getErrorForeground()
         syncButtons()
@@ -284,7 +306,7 @@ internal class RepoIssuesTreePanel(
                 selectedIssue = null
                 previewOpener.cancelPendingLoad()
             }
-            is RepoIssueTreeItem.IssueNode -> {
+            is RepoIssueTreeItem.SelectableIssue -> {
                 selectedTarget = item.target
                 selectedIssue = item.issue
                 previewOpener.openIssue(item.target, item.issue)
@@ -294,23 +316,21 @@ internal class RepoIssuesTreePanel(
         syncButtons()
     }
 
-    private fun expandRepositoryNodes(): Unit {
-        val expandedFirstMilestones = mutableSetOf<String>()
-        var row = 0
-        while (row < tree.rowCount) {
-            val path = tree.getPathForRow(row)
-            val item = (path?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
-            when (item) {
-                is RepoIssueTreeItem.Repository -> tree.expandPath(path)
-                is RepoIssueTreeItem.Milestone -> {
-                    if (expandedFirstMilestones.add(item.target.issuesUrl)) {
-                        tree.expandPath(path)
+    private fun createIssueNode(
+        target: RepoIssueTarget,
+        row: IssueTreeGrouping.IssueRow
+    ): DefaultMutableTreeNode =
+        when (row) {
+            is IssueTreeGrouping.IssueRow.Parent -> {
+                DefaultMutableTreeNode(RepoIssueTreeItem.ParentIssue(target, row.issue)).apply {
+                    row.children.forEach { child ->
+                        add(DefaultMutableTreeNode(RepoIssueTreeItem.SubIssue(target, child)))
                     }
                 }
             }
-            row += 1
+            is IssueTreeGrouping.IssueRow.Standalone ->
+                DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, row.issue))
         }
-    }
 
     private fun statusText(total: Int, failures: Int, hiddenForks: Int, hiddenNonOwned: Int): String =
         listOfNotNull(
@@ -331,7 +351,9 @@ internal class RepoIssuesTreePanel(
     private sealed interface RepoLoadResult {
         data class Loaded(
             val target: RepoIssueTarget,
-            val issues: List<Issue>
+            val issues: List<Issue>,
+            val milestones: List<IssueMilestone>,
+            val relationships: List<IssueRelationship>
         ) : RepoLoadResult
 
         data class Failed(
@@ -347,26 +369,4 @@ internal class RepoIssuesTreePanel(
             val target: RepoIssueTarget
         ) : RepoLoadResult
     }
-}
-
-internal sealed interface RepoIssueTreeItem {
-    data class Repository(
-        val target: RepoIssueTarget,
-        val openIssueCount: Int?
-    ) : RepoIssueTreeItem
-
-    data class IssueNode(
-        val target: RepoIssueTarget,
-        val issue: Issue
-    ) : RepoIssueTreeItem
-
-    data class Milestone(
-        val target: RepoIssueTarget,
-        val title: String,
-        val openIssueCount: Int
-    ) : RepoIssueTreeItem
-
-    data class Message(
-        val text: String
-    ) : RepoIssueTreeItem
 }
