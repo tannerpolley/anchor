@@ -170,6 +170,37 @@ EOF
 cp "$issue_tmp/valid-issue.md" "$issue_tmp/invalid-issue.md"
 sed -i '/^\*\*Goal Command:\*\*/d' "$issue_tmp/invalid-issue.md"
 
+cat >"$tmp_dir/malformed-ledger.json" <<'EOF'
+{"question_id":
+EOF
+
+cat >"$tmp_dir/invalid-ledger.json" <<'EOF'
+{
+  "question_id": "wrong_question",
+  "source": "request_user_input",
+  "selected_mode": "auto",
+  "repo_root": ".",
+  "plugin_manifest_version": "1",
+  "plugin_contract_hash": "fixture",
+  "started_at": "2026-07-10T00:00:00Z",
+  "autonomy_scope": "one-route",
+  "mutation_scope": ["current-repo"],
+  "candidate_scope": ["fixture"],
+  "route_policy": {
+    "one_route_only": true,
+    "continue_to_next_candidate": false
+  },
+  "proof_policy": {"required": true},
+  "stop_conditions": [
+    "missing-proof",
+    "dirty-unsafe-state",
+    "failed-validation",
+    "decision-outside-policy"
+  ],
+  "downstream_ledger_paths": ["fixture.json"]
+}
+EOF
+
 assert_success \
     "valid decision ledger" \
     "$repo_root/scripts/validate-decision-ledger.sh" \
@@ -208,5 +239,22 @@ assert_failure \
     "Missing metadata field: Goal Command" \
     "$repo_root/scripts/validate-issue-mirror.sh" \
     --issue-file "$issue_tmp/invalid-issue.md"
+assert_success \
+    "valid workflow mode ledger" \
+    "$repo_root/scripts/validate-workflow-mode-ledger.sh" \
+    --repo-root "$repo_root" \
+    --mode-ledger-path "$repo_root/.superpowers/runs/20260709-linux-development-toolchain/workflow-mode-ledger.json"
+assert_failure \
+    "malformed workflow mode ledger" \
+    "Mode ledger is not valid JSON" \
+    "$repo_root/scripts/validate-workflow-mode-ledger.sh" \
+    --repo-root "$repo_root" \
+    --mode-ledger-path "$tmp_dir/malformed-ledger.json"
+assert_failure \
+    "invalid workflow mode question" \
+    "question_id must be project_workflow_mode" \
+    "$repo_root/scripts/validate-workflow-mode-ledger.sh" \
+    --repo-root "$repo_root" \
+    --mode-ledger-path "$tmp_dir/invalid-ledger.json"
 
 printf 'All validator tests passed.\n'
