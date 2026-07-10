@@ -20,13 +20,13 @@
 
 **Outcome Source:** docs/superpowers/plans/2026-06-26-m1-issue-editor-preview-plan.md#outcome-proof
 **Intent:** Users click issues in the Anchor tool window and read rendered GitHub Markdown in the main editor preview tab instead of inside a plugin split pane.
-**Target Output:** A sandbox IDE shows an Anchor issue preview editor tab after selecting an issue, and selecting another issue reuses the preview tab.
+**Target Output:** The current IntelliJ IDEA Workspace window with the built plugin installed shows an Anchor issue preview editor tab after selecting an issue, and selecting another issue reuses the preview tab.
 **Owner:** Anchor UI/editor integration.
 **Interface:** User selects issue nodes in the Anchor tool window; the IntelliJ editor area displays the issue preview.
 **Cutover:** Remove the tool-window issue detail pane once the editor preview path owns issue display.
 **Replaced Path:** SwingIssueDetailRenderer as a tool-window detail surface and the JSplitPane path in RepoIssuesTreePanel.
-**Acceptance Proof:** Unit tests, gradlew.bat test, gradlew.bat verifyPlugin, and HITL sandbox IDE preview-tab verification.
-**Stop Criteria:** Stop before merge if the configured IntelliJ Platform build cannot compile a preview-tab editor open path, if JCEF editor ownership cannot be disposed safely, if automated tests fail, or if HITL sandbox preview proof is missing.
+**Acceptance Proof:** Unit tests, ./gradlew test, ./gradlew verifyPlugin, and HITL installed-plugin preview-tab verification in the current IntelliJ IDEA Workspace window.
+**Stop Criteria:** Stop before merge if the configured IntelliJ Platform build cannot compile a preview-tab editor open path, if JCEF editor ownership cannot be disposed safely, if automated tests fail, or if HITL installed-plugin preview proof is missing.
 **Avoid:** Disk temp files, Markdown-plugin dependency, duplicate issue detail surfaces, raw HTML shown as editor text, silent substitutions when GitHub rendering fails, and broad Compose tool-window refactors.
 
 ## Project Merge
@@ -50,7 +50,7 @@ Move rendered GitHub issue detail display from the Anchor tool window into a reu
 - [ ] Repository nodes open by default; milestone nodes are collapsed except the first active milestone.
 - [ ] The old plugin-pane issue detail surface is removed.
 - [ ] Detail load, render, and JCEF creation failures produce explicit preview error content.
-- [ ] gradlew.bat test and gradlew.bat verifyPlugin pass.
+- [ ] ./gradlew test and ./gradlew verifyPlugin pass.
 
 ## Blocked by
 
@@ -66,9 +66,9 @@ Move rendered GitHub issue detail display from the Anchor tool window into a reu
 
 ## Proof Oracle
 
-- pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-outcome-proof.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
-- pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-decision-ledger.ps1 -Path docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md -Kind plan
-- pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-task-use-cases.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
-- .\gradlew.bat test
-- .\gradlew.bat verifyPlugin
-- HITL sandbox IDE preview-tab verification before merge.
+- ./scripts/validate-plan-outcome-proof.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
+- ./scripts/validate-decision-ledger.sh --path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md --kind plan
+- ./scripts/validate-plan-task-use-cases.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
+- ./gradlew test
+- ./gradlew verifyPlugin
+- HITL installed-plugin preview-tab verification in the current IntelliJ IDEA Workspace window before merge.

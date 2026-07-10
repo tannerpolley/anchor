@@ -14,8 +14,8 @@ date: 2026-06-26
 - Issue selection currently calls `loadIssueDetail`, fetches comments, renders body and comments through the GitHub Markdown API, and sends the rendered HTML into the detail renderer.
 - `SwingIssueDetailRenderer` owns a JCEF browser and already builds themed HTML for issue metadata, labels, body, and comments.
 - `Issue` already has `milestone: String?`, and `GitHubProvider.toIssue` parses the GitHub issue milestone title.
-- The current tree hierarchy is `Repo -> Issue`. `RepoIssuesTreeRenderer` displays a milestone suffix on issue rows but does not group by milestone.
-- Recent commits are focused on issue workflow hardening: workspace repo discovery, authenticated issue rendering, collapsible repo nodes, and issue sorting.
+- The issue tree needs milestone grouping without owning issue detail rendering.
+- The editor preview must remain independent from repository discovery and tree layout.
 - The Superpowers roadmap links this work to `M1 - Issue Workflow Hardening`.
 
 ## Problem
@@ -173,12 +173,12 @@ Automated proof candidates:
 - Unit-test virtual issue file identity so the same owner/repo/issue reuses the same preview target while different issues do not collide.
 - Unit-test the issue document builder for labels, body, comments, sanitizer boundaries, and explicit error documents.
 - Add stale-request tests if the preview opener is extracted behind a testable boundary.
-- Run `.\gradlew.bat test`.
-- Run `.\gradlew.bat verifyPlugin` because the feature adds a `FileEditorProvider` extension.
+- Run `./gradlew test`.
+- Run `./gradlew verifyPlugin` because the feature adds a `FileEditorProvider` extension.
 
 HITL proof candidates:
 
-- In a sandbox IDE, click issues across multiple repos and milestones.
+- In the current IntelliJ IDEA Workspace window, click issues across milestones.
 - Confirm the main editor preview tab reuses for successive issue selections.
 - Confirm the plugin tool window no longer shows its own issue detail pane.
 - Confirm rendered body and comments match the current detail renderer capability.

@@ -17,15 +17,15 @@ Thanks for taking the time. Anchor is a solo side project and outside feedback i
 
 ## Development setup
 
-**Requirements:** JDK 17+, IntelliJ IDEA or Android Studio (any recent version)
+**Requirements:** JDK 21, Bash 5+, Git, jq, ShellCheck, GNU core utilities, and IntelliJ IDEA or Android Studio
 
 ```bash
 # Clone
 git clone https://github.com/alph-a07/anchor.git
 cd anchor
 
-# Run the plugin in a sandboxed IDE instance
-./gradlew runIde
+# Run tests
+./gradlew test
 
 # Build a distributable ZIP
 ./gradlew buildPlugin
@@ -33,11 +33,9 @@ cd anchor
 # Validate plugin.xml and compatibility against the platform range
 ./gradlew verifyPlugin
 
-# Run tests
-./gradlew test
 ```
 
-The `runIde` task launches IntelliJ Community as the host by default. To test in Android Studio, set `intellijPlatform.type = AI` in `build.gradle.kts`.
+After `buildPlugin`, install `build/distributions/anchor-*.zip` into the currently open IntelliJ IDEA window and reload that same window. Do not launch a sandbox IDE when verifying changes in the working project.
 
 ---
 

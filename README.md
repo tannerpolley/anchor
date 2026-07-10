@@ -87,10 +87,12 @@ Bug reports and feature requests go in [GitHub Issues](../../issues). Pull reque
 ```bash
 git clone https://github.com/alph-a07/anchor.git
 cd anchor
-./gradlew runIde          # launch a sandboxed IDE with Anchor loaded
+./gradlew test            # run automated tests
 ./gradlew buildPlugin     # → build/distributions/anchor-*.zip
 ./gradlew verifyPlugin    # validate plugin.xml and IDE compatibility
 ```
+
+Install the generated ZIP into the currently open IntelliJ IDEA window and reload that window when verifying plugin changes.
 
 ## License
 

@@ -24,7 +24,7 @@ Milestone pages are index views. They may list related specs, plans, and issues,
 
 ## Roadmap And Milestones
 
-- [M1 - Issue Workflow Hardening](milestones/M1-issue-workflow-hardening.md): make the multi-repository issue browser dependable, sortable, and comfortable for repeated IDE use.
+- [M1 - Issue Workflow Hardening](milestones/M1-issue-workflow-hardening.md): keep the current repository's issue navigator dependable while rendering selected issues in the main editor.
 - [M2 - Pull Request Workflow Parity](milestones/M2-pull-request-workflow-parity.md): bring PR browsing, detail rendering, comments, review state, commits, and branch actions to the same quality bar as issues.
 - [M3 - Provider And Enterprise Readiness](milestones/M3-provider-and-enterprise-readiness.md): harden provider boundaries, GitHub Enterprise behavior, authentication, and future provider paths.
 - [M4 - Marketplace Quality And Release Operations](milestones/M4-marketplace-quality-and-release-operations.md): keep plugin packaging, compatibility, screenshots, changelog, and release verification trustworthy.
@@ -71,9 +71,9 @@ Agents should read this context before creating specs, writing plans, splitting 
 
 Implementation work should stay small enough to verify with targeted Gradle checks. Typical proof commands are:
 
-- `.\gradlew.bat test`
-- `.\gradlew.bat verifyPlugin`
-- `.\gradlew.bat buildPlugin`
+- `./gradlew --no-daemon test`
+- `./gradlew --no-daemon verifyPlugin`
+- `./gradlew --no-daemon buildPlugin`
 
 Use the cheapest proof that covers the changed behavior. Escalate to `verifyPlugin` or `buildPlugin` when plugin metadata, compatibility, packaging, or JetBrains platform integration changes.
 

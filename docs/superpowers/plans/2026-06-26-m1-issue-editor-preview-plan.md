@@ -21,14 +21,14 @@
 
 - **Intent:** Users click issues in the Anchor tool window and read rendered GitHub Markdown in the main editor preview tab instead of inside a plugin split pane.
 - **Current Behavior:** `RepoIssuesTreePanel` builds a `JSplitPane` with a tree and `SwingIssueDetailRenderer`; selecting an issue renders details inside the tool window.
-- **Expected Outcome:** `RepoIssuesTreePanel` renders only navigation, issues are grouped as `Repo -> Milestone -> Issue`, and issue selection opens or updates one read-only editor preview tab containing issue metadata, labels, rendered body, and comments.
-- **Target Output:** A sandbox IDE shows an Anchor issue preview editor tab after selecting an issue, and selecting another issue reuses the preview tab.
+- **Expected Outcome:** `RepoIssuesTreePanel` renders only navigation, issues are grouped as `Milestone -> Issue`, and issue selection opens or updates one read-only editor preview tab containing issue metadata, labels, rendered body, and comments.
+- **Target Output:** The current IntelliJ IDEA Workspace window with the built plugin installed shows an Anchor issue preview editor tab after selecting an issue, and selecting another issue reuses the preview tab.
 - **Owner:** Anchor UI/editor integration.
 - **Interface:** User selects issue nodes in the Anchor tool window; the IntelliJ editor area displays the issue preview.
 - **Cutover:** Remove the tool-window issue detail pane once the editor preview path owns issue display.
 - **Replaced Path:** `SwingIssueDetailRenderer` as a tool-window detail surface and the `JSplitPane` path in `RepoIssuesTreePanel`.
-- **Evidence:** Unit tests for document building, milestone grouping, virtual file identity, and preview payload storage; `.\gradlew.bat test`; `.\gradlew.bat verifyPlugin`; manual sandbox IDE preview-tab verification.
-- **Acceptance Proof:** The implementation is complete only when automated tests pass, plugin verification passes, and HITL sandbox verification confirms preview reuse, rendered body/comments, milestone grouping, and removal of the plugin detail pane.
+- **Evidence:** Unit tests for document building, milestone grouping, virtual file identity, and preview payload storage; `./gradlew test`; `./gradlew verifyPlugin`; manual installed-plugin preview-tab verification in the current IntelliJ IDEA Workspace window.
+- **Acceptance Proof:** The implementation is complete only when automated tests pass, plugin verification passes, and HITL installed-plugin verification in the current IntelliJ IDEA Workspace window confirms preview reuse, rendered body/comments, milestone grouping, and removal of the plugin detail pane.
 - **Stop Criteria:** Stop before implementation merge if the configured IntelliJ Platform build cannot compile a preview-tab editor open path, if JCEF editor ownership cannot be disposed safely, or if tests cannot prove grouping and document-builder behavior.
 - **Avoid:** Disk temp files, Markdown-plugin dependency, duplicate issue detail surfaces, raw HTML shown as editor text, silent substitutions when GitHub rendering fails, and broad Compose tool-window refactors.
 - **Risk:** The exact IntelliJ preview-tab API for build `253.1` must be verified during implementation; editor lifecycle bugs can leak JCEF resources if disposal is wrong.
@@ -44,11 +44,11 @@
 - **Integration Points:** Swing tree selection, IntelliJ `FileEditorProvider`, editor manager preview opening, JCEF diagnostics, HTML sanitizer, plugin XML extension registration.
 - **Migration Or Cutover:** Introduce builder and editor preview path first, wire issue selection to the editor, then remove direct tool-window detail rendering.
 - **Replaced Path Handling:** Delete or retire `SwingIssueDetailRenderer` only after its reusable HTML behavior is extracted and no references remain.
-- **Acceptance Proof Gate:** Do not mark implementation complete until validators, tests, `verifyPlugin`, and HITL sandbox verification all pass.
+- **Acceptance Proof Gate:** Do not mark implementation complete until validators, tests, `verifyPlugin`, and HITL installed-plugin verification in the current IntelliJ IDEA Workspace window all pass.
 
 ## Test Complete And Metrics
 
-- **Test complete:** `.\gradlew.bat test` passes, `.\gradlew.bat verifyPlugin` passes, and HITL sandbox verification confirms editor preview behavior.
+- **Test complete:** `./gradlew test` passes, `./gradlew verifyPlugin` passes, and HITL installed-plugin verification in the current IntelliJ IDEA Workspace window confirms editor preview behavior.
 - **Pass metrics:** zero failing tests, successful plugin verification exit code, and manual confirmation of four user-visible behaviors: reusable preview tab, rendered body/comments, `No Milestone` grouping, and no plugin detail pane.
 - **Numerical tolerances:** No scientific or numerical tolerances apply; behavior is pass/fail by UI state and command results.
 - **TDD policy:** TDD is required where behavior can be unit-tested. UI integration steps must still start by adding the closest testable seam.
@@ -62,7 +62,7 @@
 - Repository nodes open by default; milestone nodes are collapsed except the first active milestone.
 - The old plugin-pane issue detail surface is removed.
 - Detail load, render, and JCEF creation failures produce explicit preview error content.
-- `.\gradlew.bat test` and `.\gradlew.bat verifyPlugin` pass.
+- `./gradlew test` and `./gradlew verifyPlugin` pass.
 
 ## Non-Goals
 
@@ -76,20 +76,20 @@
 
 Run these commands from the repo root:
 
-```powershell
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-outcome-proof.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-decision-ledger.ps1 -Path docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md -Kind plan
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-task-use-cases.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
-.\gradlew.bat test
-.\gradlew.bat verifyPlugin
+```bash
+./scripts/validate-plan-outcome-proof.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
+./scripts/validate-decision-ledger.sh --path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md --kind plan
+./scripts/validate-plan-task-use-cases.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
+./gradlew test
+./gradlew verifyPlugin
 ```
 
 Manual HITL proof:
 
-1. Run `.\gradlew.bat runIde`.
-2. Open a project with at least one GitHub repo containing milestone and unassigned issues.
-3. Open the Anchor tool window.
-4. Confirm repository nodes contain milestone nodes.
+1. Run `./gradlew buildPlugin`.
+2. Install `build/distributions/anchor-*.zip` into the currently open IntelliJ IDEA Workspace window and reload that window.
+3. Open the Anchor tool window for a GitHub repository containing milestone and unassigned issues.
+4. Confirm milestone nodes contain their issue rows.
 5. Click one issue and confirm the main editor area opens an Anchor issue preview tab.
 6. Click a second issue and confirm the preview tab is reused.
 7. Confirm body and comments render as GitHub Markdown.
@@ -105,7 +105,7 @@ Manual HITL proof:
 | Tree hierarchy | Source spec | `Repo -> Milestone -> Issue`. | Requires milestone grouping and renderer updates. | No | Implementer |
 | Milestone metadata | Source spec | Title grouping only. | Avoids extra milestone API calls. | No | Implementer |
 | Rendering approach | Source spec | Custom JCEF-backed file editor. | Requires plugin XML registration and editor lifecycle handling. | No | Implementer |
-| Test complete | User planning grill | Automated tests plus HITL sandbox verification. | Defines final completion proof. | No | User |
+| Test complete | User planning grill | Automated tests plus HITL installed-plugin verification in the current IntelliJ IDEA Workspace window. | Defines final completion proof. | No | User |
 | TDD policy | User planning grill | TDD required. | Tasks must start with tests where practical. | No | User |
 | Execution strategy | User planning grill | Issue first, branch `codex/issue-editor-preview`. | Plan routes next to issue mirror creation. | No | User |
 | Preview API | Source spec and plan | Verify exact IntelliJ preview open API during implementation. | Prevents guessing at a platform method. | Yes | Implementer |
@@ -147,7 +147,7 @@ fun issueDocumentIncludesBodyCommentsLabelsAndMetadata(): Unit {
 
 - [ ] **Step 2: Run the targeted test and verify the expected failure**
 
-Run: `.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.detail.IssuePreviewDocumentTest"`
+Run: `./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.detail.IssuePreviewDocumentTest"`
 
 Expected: fails because `IssuePreviewDocument` does not exist.
 
@@ -161,7 +161,7 @@ Update `SwingIssueDetailRenderer.showIssue`, `showError`, `showLoading`, and `sh
 
 - [ ] **Step 5: Run the targeted test and commit**
 
-Run: `.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.detail.IssuePreviewDocumentTest"`
+Run: `./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.detail.IssuePreviewDocumentTest"`
 
 Expected: pass.
 
@@ -177,7 +177,7 @@ Commit: `git commit -m "test: cover issue preview document building"`
 
 **Files:**
 - Create: `src/main/kotlin/com/itsjeel01/remotevcsmanager/ui/IssueMilestoneGrouping.kt`
-- Create: `src/test/kotlin/com/itsjeel01/remotevcsmanager/ui/IssueMilestoneGroupingTest.kt`
+- Create: `src/test/kotlin/com/itsjeel01/remotevcsmanager/ui/IssueTreeGroupingTest.kt`
 - Modify: `src/main/kotlin/com/itsjeel01/remotevcsmanager/ui/RepoIssuesTreePanel.kt`
 - Modify: `src/main/kotlin/com/itsjeel01/remotevcsmanager/ui/RepoIssuesTreeRenderer.kt`
 
@@ -202,7 +202,7 @@ fun groupsIssuesByMilestoneWithNoMilestoneLast(): Unit {
 
 - [ ] **Step 2: Run the targeted test and verify the expected failure**
 
-Run: `.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.IssueMilestoneGroupingTest"`
+Run: `./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.IssueTreeGroupingTest"`
 
 Expected: fails because `IssueMilestoneGrouping` does not exist.
 
@@ -212,19 +212,18 @@ Create `IssueMilestoneGrouping.MilestoneGroup(title: String, issues: List<Issue>
 
 - [ ] **Step 4: Wire milestone nodes into `showIssueNodes`**
 
-For each loaded repo, build a repo node, then milestone child nodes, then issue nodes under each milestone. Keep existing failure, hidden fork, hidden non-owned, and empty repo behavior.
+Build milestone nodes directly under the tree root, then issue nodes under each milestone. Keep explicit failure and empty-repository behavior.
 
 - [ ] **Step 5: Update renderer and expansion behavior**
 
-Render milestone nodes in bold or regular text with issue count. Keep repo nodes expanded by default and expand the first milestone row for each repo after reload.
+Render milestone nodes in bold or regular text with issue count and expand the first milestone row after reload.
 
 - [ ] **Step 6: Run targeted and existing tests, then commit**
 
 Run:
 
-```powershell
-.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.IssueMilestoneGroupingTest"
-.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.GitRootDiscoveryTest"
+```bash
+./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.IssueTreeGroupingTest"
 ```
 
 Expected: pass.
@@ -262,7 +261,7 @@ fun issueFilePathIsStableForSameIssue(): Unit {
 
 - [ ] **Step 2: Run the targeted test and verify the expected failure**
 
-Run: `.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.editor.AnchorIssueVirtualFileTest"`
+Run: `./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.editor.AnchorIssueVirtualFileTest"`
 
 Expected: fails because editor package classes do not exist.
 
@@ -282,9 +281,9 @@ Add the file editor provider extension under `<extensions defaultExtensionNs="co
 
 Run:
 
-```powershell
-.\gradlew.bat test --tests "com.itsjeel01.remotevcsmanager.ui.editor.AnchorIssueVirtualFileTest"
-.\gradlew.bat verifyPlugin
+```bash
+./gradlew test --tests "com.itsjeel01.remotevcsmanager.ui.editor.AnchorIssueVirtualFileTest"
+./gradlew verifyPlugin
 ```
 
 Expected: pass.
@@ -333,9 +332,9 @@ Run `rg -n "SwingIssueDetailRenderer|detailRenderer" src/main/kotlin src/test/ko
 
 Run:
 
-```powershell
-.\gradlew.bat test
-.\gradlew.bat verifyPlugin
+```bash
+./gradlew test
+./gradlew verifyPlugin
 ```
 
 Expected: pass.
@@ -346,8 +345,8 @@ Commit: `git commit -m "feat: open issues in editor preview"`
 
 **Use Cases:**
 - Plugin metadata accepts the new editor provider extension.
-- The editor preview tab appears in a sandbox IDE.
-- Selecting issues across repos and milestones reuses the preview tab.
+- The editor preview tab appears in the current IntelliJ IDEA Workspace window.
+- Selecting issues across milestones reuses the preview tab.
 - Error documents are visible when detail loading fails.
 
 **Files:**
@@ -358,22 +357,22 @@ Commit: `git commit -m "feat: open issues in editor preview"`
 
 Run:
 
-```powershell
-.\gradlew.bat test
-.\gradlew.bat verifyPlugin
+```bash
+./gradlew test
+./gradlew verifyPlugin
 ```
 
 Expected: both commands exit 0.
 
-- [ ] **Step 2: Run sandbox IDE**
+- [ ] **Step 2: Install into the current IDE**
 
-Run: `.\gradlew.bat runIde`
+Run: `./gradlew buildPlugin`, then install `build/distributions/anchor-*.zip` into the current IntelliJ IDEA Workspace window and reload that window.
 
-Expected: sandbox IDE starts with Anchor loaded.
+Expected: the current IntelliJ IDEA Workspace window reloads with the latest Anchor plugin.
 
 - [ ] **Step 3: Perform HITL preview proof**
 
-In the sandbox IDE, open a project with GitHub issues that include at least one milestone issue and one unassigned issue. Click three issues across at least two milestone groups. Confirm the editor preview tab is reused and rendered content includes body and comments.
+In the current IntelliJ IDEA Workspace window, open a project with GitHub issues that include at least one milestone issue and one unassigned issue. Click three issues across at least two milestone groups. Confirm the editor preview tab is reused and rendered content includes body and comments.
 
 - [ ] **Step 4: Perform HITL cutover proof**
 
@@ -399,7 +398,7 @@ If validation required code changes, run tests again and commit with `git commit
 
 Run:
 
-```powershell
+```bash
 rg -n "SwingIssueDetailRenderer|detailRenderer|JSplitPane" src/main/kotlin src/test/kotlin
 ```
 
@@ -409,10 +408,10 @@ Expected: no references to removed issue-detail ownership remain, except unrelat
 
 Run:
 
-```powershell
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-outcome-proof.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-decision-ledger.ps1 -Path docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md -Kind plan
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate-plan-task-use-cases.ps1 -PlanPath docs\superpowers\plans\2026-06-26-m1-issue-editor-preview-plan.md
+```bash
+./scripts/validate-plan-outcome-proof.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
+./scripts/validate-decision-ledger.sh --path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md --kind plan
+./scripts/validate-plan-task-use-cases.sh --plan-path docs/superpowers/plans\2026-06-26-m1-issue-editor-preview-plan.md
 ```
 
 Expected: all validators pass.
@@ -421,9 +420,9 @@ Expected: all validators pass.
 
 Run:
 
-```powershell
-.\gradlew.bat test
-.\gradlew.bat verifyPlugin
+```bash
+./gradlew test
+./gradlew verifyPlugin
 ```
 
 Expected: both commands exit 0.
@@ -432,8 +431,8 @@ Expected: both commands exit 0.
 
 Run:
 
-```powershell
-pwsh.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hooks\codex-cleanup.ps1" -RepoRoot .
+```bash
+bash "$HOME/.codex/hooks/codex-cleanup.sh" --repo-root .
 ```
 
 Expected: no task-owned leftover processes.
@@ -442,7 +441,7 @@ Expected: no task-owned leftover processes.
 
 Run:
 
-```powershell
+```bash
 git status --short
 git add src/main/kotlin src/test/kotlin src/main/resources/META-INF/plugin.xml
 git commit -m "chore: finish issue editor preview cleanup"

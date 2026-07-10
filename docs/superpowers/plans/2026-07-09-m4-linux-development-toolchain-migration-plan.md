@@ -78,9 +78,6 @@ shellcheck scripts/*.sh
 ./scripts/validate-plan-task-use-cases.sh --plan-path docs/superpowers/plans/2026-07-09-m4-linux-development-toolchain-migration-plan.md
 ./scripts/validate-decision-ledger.sh --path docs/superpowers/plans/2026-07-09-m4-linux-development-toolchain-migration-plan.md --kind plan
 ./scripts/validate-issue-mirror.sh --issue-file docs/superpowers/issues/1-render-github-issues-in-editor-preview-and-group-by-milestone.md
-./scripts/validate-issue-mirror.sh --issue-file docs/superpowers/issues/3-load-github-milestones-and-issue-relationships.md
-./scripts/validate-issue-mirror.sh --issue-file docs/superpowers/issues/4-group-issue-tree-by-milestones-parent-issues-and-sub-issues.md
-./scripts/validate-issue-mirror.sh --issue-file docs/superpowers/issues/5-wire-complete-issue-tree-rendering-and-workspace-proof.md
 ./scripts/validate-workflow-mode-ledger.sh --repo-root . --mode-ledger-path .superpowers/runs/20260709-linux-development-toolchain/workflow-mode-ledger.json
 ./gradlew --no-daemon test
 ./gradlew --no-daemon verifyPlugin
@@ -290,13 +287,9 @@ git commit -m "build: validate workflow ledgers with jq"
 - Modify: `CONTRIBUTING.md`
 - Modify: `docs/superpowers/PROJECT_CONTEXT.md`
 - Modify: `docs/superpowers/specs/2026-06-26-issue-editor-preview-design.md`
-- Modify: `docs/superpowers/specs/2026-06-29-tool-window-navigation-refresh-design.md`
 - Modify: `docs/superpowers/plans/2026-06-26-m1-issue-editor-preview-plan.md`
-- Modify: `docs/superpowers/plans/2026-06-29-m1-tool-window-navigation-refresh-plan.md`
 - Modify: `docs/superpowers/issues/1-render-github-issues-in-editor-preview-and-group-by-milestone.md`
-- Modify: `docs/superpowers/issues/3-load-github-milestones-and-issue-relationships.md`
-- Modify: `docs/superpowers/issues/4-group-issue-tree-by-milestones-parent-issues-and-sub-issues.md`
-- Modify: `docs/superpowers/issues/5-wire-complete-issue-tree-rendering-and-workspace-proof.md`
+- Delete: the obsolete multi-repository artifacts named by `docs/superpowers/plans/2026-07-10-m1-single-repository-issue-navigator-plan.md`.
 
 - [ ] **Step 1: Capture the failing Windows-tooling inventory**
 
@@ -335,7 +328,8 @@ Expected: runtime portability fixtures, generated wrapper compatibility text, an
 ```bash
 ./scripts/test-validators.sh
 for issue in docs/superpowers/issues/[1345]-*.md; do ./scripts/validate-issue-mirror.sh --issue-file "$issue"; done
-git add README.md CONTRIBUTING.md docs gradlew.bat scripts/*.ps1
+git add README.md CONTRIBUTING.md docs
+git add -u gradlew.bat scripts
 git commit -m "docs: cut development workflows over to Linux"
 ```
 
