@@ -56,7 +56,7 @@ object RemoteVcsIssuesPanel {
             .sortedBy { it.displayName.lowercase() }
     }
 
-    private fun createTarget(remote: GitRemoteInfo): RepoIssueTarget? {
+    internal fun createTarget(remote: GitRemoteInfo): RepoIssueTarget? {
         if (remote.provider != "github") return null
         val host = parseRemoteHost(remote.remoteUrl) ?: "github.com"
         return RepoIssueTarget(
