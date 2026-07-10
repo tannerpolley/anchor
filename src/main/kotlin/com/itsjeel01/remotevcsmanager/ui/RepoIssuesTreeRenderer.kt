@@ -19,7 +19,6 @@ internal class RepoIssuesTreeRenderer : ColoredTreeCellRenderer() {
     ): Unit {
         val node = value as? DefaultMutableTreeNode
         when (val item = node?.userObject) {
-            is RepoIssueTreeItem.Repository -> renderRepository(item)
             is RepoIssueTreeItem.Milestone -> renderMilestone(item)
             is RepoIssueTreeItem.ParentIssue -> renderIssue(item.issue, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
             is RepoIssueTreeItem.SubIssue -> renderIssue(item.issue, SimpleTextAttributes.REGULAR_ATTRIBUTES)
@@ -27,15 +26,6 @@ internal class RepoIssuesTreeRenderer : ColoredTreeCellRenderer() {
             is RepoIssueTreeItem.Message -> append(item.text, SimpleTextAttributes.GRAYED_ATTRIBUTES)
             else -> append("GitHub Issues")
         }
-    }
-
-    private fun renderRepository(item: RepoIssueTreeItem.Repository): Unit {
-        append(item.target.displayName, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
-        val count = item.openIssueCount
-        if (count != null) {
-            append("  $count open", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-        }
-        toolTipText = item.target.rootPath
     }
 
     private fun renderMilestone(item: RepoIssueTreeItem.Milestone): Unit {

@@ -33,10 +33,7 @@ import kotlinx.coroutines.runBlocking
 internal class RepoIssuesTreePanel(
     private val project: Project,
     private val provider: GitHubProvider,
-    private val allTargets: List<RepoIssueTarget>,
-    initialInclusionState: RepoIssueInclusionState,
-    private val onInclusionChanged: (RepoIssueInclusionState) -> Unit,
-    private val accountLogins: Set<String>,
+    private val target: RepoIssueTarget,
     private val previewOpener: IssueEditorPreviewOpener
 ) {
 
@@ -45,15 +42,10 @@ internal class RepoIssuesTreePanel(
     private val tree = Tree(treeModel)
     private val status = JBLabel()
     private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
-    private val reposButton = JButton("Repositories")
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
     private val treeRequests = AtomicLong()
-    private var inclusionState = initialInclusionState
-    private var targets: List<RepoIssueTarget> = inclusionState.includedTargets(allTargets)
-    private var selectedTarget: RepoIssueTarget? = targets.firstOrNull() ?: allTargets.firstOrNull()
     private var selectedIssue: Issue? = null
-    private var hasVisibleTargets = targets.isNotEmpty()
 
     val component: JComponent = createComponent()
 
@@ -89,9 +81,6 @@ internal class RepoIssuesTreePanel(
         val refresh = JButton("Refresh").apply {
             addActionListener { reloadIssues() }
         }
-        reposButton.apply {
-            addActionListener { showRepositorySelectionDialog() }
-        }
         openIssueButton.apply {
             isEnabled = false
             addActionListener {
@@ -99,7 +88,8 @@ internal class RepoIssuesTreePanel(
             }
         }
         openRepoButton.apply {
-            addActionListener { selectedTarget?.let { BrowserUtil.browse(it.issuesUrl) } }
+            isEnabled = target.issuesUrl.isNotBlank()
+            addActionListener { BrowserUtil.browse(target.issuesUrl) }
         }
         sortBox.apply {
             addActionListener { reloadIssues() }
@@ -108,7 +98,6 @@ internal class RepoIssuesTreePanel(
         sortRow.add(status)
         sortRow.add(JBLabel("Sort:"))
         sortRow.add(sortBox)
-        actionsRow.add(reposButton)
         actionsRow.add(refresh)
         actionsRow.add(openIssueButton)
         actionsRow.add(openRepoButton)
@@ -121,7 +110,7 @@ internal class RepoIssuesTreePanel(
         tree.isRootVisible = false
         tree.showsRootHandles = true
         tree.cellRenderer = RepoIssuesTreeRenderer()
-        tree.emptyText.text = "No GitHub repositories"
+        tree.emptyText.text = "No GitHub issues"
         tree.selectionModel.selectionMode = javax.swing.tree.TreeSelectionModel.SINGLE_TREE_SELECTION
         tree.addTreeSelectionListener {
             handleSelection(tree.selectionPath)
@@ -134,55 +123,37 @@ internal class RepoIssuesTreePanel(
         previewOpener.cancelPendingLoad()
         selectedIssue = null
         syncButtons()
-        if (targets.isEmpty()) {
-            hasVisibleTargets = false
-            status.text = "0 selected"
-            status.foreground = UIUtil.getContextHelpForeground()
-            showNoSelectedNodes()
-            syncButtons()
-            return
-        }
-        status.text = "Loading ${targets.size} repos..."
+        status.text = "Loading..."
         status.foreground = UIUtil.getContextHelpForeground()
-        showLoadingNodes()
+        showLoadingNode()
 
         ApplicationManager.getApplication().executeOnPooledThread {
-            val result = targets.map { target ->
-                runCatching {
-                    runBlocking {
-                        val access = provider.getIssueTrackingAccess(target.owner, target.repoName, accountLogins)
-                        when {
-                            access.fork -> RepoLoadResult.HiddenFork(target)
-                            !access.owned -> RepoLoadResult.HiddenNotOwned(target)
-                            else -> {
-                                val issues = provider.getIssuesSorted(
-                                    owner = target.owner,
-                                    repo = target.repoName,
-                                    state = "open",
-                                    filter = null,
-                                    labels = null,
-                                    sort = sortOption.apiSort,
-                                    direction = sortOption.apiDirection
-                                )
-                                val sortedIssues = sortOption.sort(issues)
-                                val milestones = provider.getMilestones(target.owner, target.repoName)
-                                val relationships = provider.getIssueRelationships(
-                                    owner = target.owner,
-                                    repo = target.repoName,
-                                    issues = sortedIssues
-                                )
-                                RepoLoadResult.Loaded(
-                                    target = target,
-                                    issues = sortedIssues,
-                                    milestones = milestones,
-                                    relationships = relationships
-                                )
-                            }
-                        }
-                    }
-                }.getOrElse { error ->
-                    RepoLoadResult.Failed(target, error.message ?: "GitHub API request failed")
+            val result = runCatching {
+                runBlocking {
+                    val issues = provider.getIssuesSorted(
+                        owner = target.owner,
+                        repo = target.repoName,
+                        state = "open",
+                        filter = null,
+                        labels = null,
+                        sort = sortOption.apiSort,
+                        direction = sortOption.apiDirection
+                    )
+                    val sortedIssues = sortOption.sort(issues)
+                    val milestones = provider.getMilestones(target.owner, target.repoName)
+                    val relationships = provider.getIssueRelationships(
+                        owner = target.owner,
+                        repo = target.repoName,
+                        issues = sortedIssues
+                    )
+                    RepoLoadResult.Loaded(
+                        issues = sortedIssues,
+                        milestones = milestones,
+                        relationships = relationships
+                    )
                 }
+            }.getOrElse { error ->
+                RepoLoadResult.Failed(error.message ?: "GitHub API request failed")
             }
 
             SwingUtilities.invokeLater {
@@ -192,122 +163,63 @@ internal class RepoIssuesTreePanel(
         }
     }
 
-    private fun showLoadingNodes(): Unit {
+    private fun showLoadingNode(): Unit {
         rootNode.removeAllChildren()
-        targets.forEach { target ->
-            val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, null))
-            repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("Loading issues...")))
-            rootNode.add(repoNode)
-        }
+        rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("Loading issues...")))
         treeModel.reload()
     }
 
-    private fun showIssueNodes(results: List<RepoLoadResult>): Unit {
+    private fun showIssueNodes(result: RepoLoadResult): Unit {
         rootNode.removeAllChildren()
-        var total = 0
-        var failures = 0
-        var hiddenForks = 0
-        var hiddenNonOwned = 0
-        val visibleTargets = mutableListOf<RepoIssueTarget>()
-
-        results.forEach { result ->
-            when (result) {
-                is RepoLoadResult.Loaded -> {
-                    val target = result.target
-                    val issues = result.issues
-                    visibleTargets.add(target)
-                    total += issues.size
-                    val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(target, issues.size))
-                    val groups = IssueTreeGrouping.group(
-                        milestones = result.milestones,
-                        issues = issues,
-                        relationships = result.relationships
-                    )
-                    if (groups.isEmpty()) {
-                        repoNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
-                    } else {
-                        groups.forEach { milestone ->
-                            val milestoneNode = DefaultMutableTreeNode(
-                                RepoIssueTreeItem.Milestone(
-                                    target = target,
-                                    title = milestone.title,
-                                    openIssueCount = milestone.openIssueCount
-                                )
+        when (result) {
+            is RepoLoadResult.Loaded -> {
+                val groups = IssueTreeGrouping.group(
+                    milestones = result.milestones,
+                    issues = result.issues,
+                    relationships = result.relationships
+                )
+                if (groups.isEmpty()) {
+                    rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+                } else {
+                    groups.forEach { milestone ->
+                        val milestoneNode = DefaultMutableTreeNode(
+                            RepoIssueTreeItem.Milestone(
+                                target = target,
+                                title = milestone.title,
+                                openIssueCount = milestone.openIssueCount
                             )
-                            if (milestone.rows.isEmpty()) {
-                                milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
-                            } else {
-                                milestone.rows.forEach { row ->
-                                    milestoneNode.add(createIssueNode(target, row))
-                                }
-                            }
-                            repoNode.add(milestoneNode)
-                        }
-                    }
-                    rootNode.add(repoNode)
-                }
-                is RepoLoadResult.Failed -> {
-                    failures += 1
-                    visibleTargets.add(result.target)
-                    val repoNode = DefaultMutableTreeNode(RepoIssueTreeItem.Repository(result.target, null))
-                    repoNode.add(
-                        DefaultMutableTreeNode(
-                            RepoIssueTreeItem.Message(result.message)
                         )
-                    )
-                    rootNode.add(repoNode)
+                        if (milestone.rows.isEmpty()) {
+                            milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+                        } else {
+                            milestone.rows.forEach { row ->
+                                milestoneNode.add(createIssueNode(row))
+                            }
+                        }
+                        rootNode.add(milestoneNode)
+                    }
                 }
-                is RepoLoadResult.HiddenFork -> hiddenForks += 1
-                is RepoLoadResult.HiddenNotOwned -> hiddenNonOwned += 1
+                status.text = "${result.issues.size} open"
+                status.foreground = UIUtil.getContextHelpForeground()
+            }
+            is RepoLoadResult.Failed -> {
+                rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message(result.message)))
+                status.text = "Failed"
+                status.foreground = UIUtil.getErrorForeground()
             }
         }
-
-        if (rootNode.childCount == 0) {
-            rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No owned GitHub repositories to track")))
-        }
-        hasVisibleTargets = visibleTargets.isNotEmpty()
-        if (selectedTarget == null || selectedTarget !in visibleTargets) {
-            selectedTarget = visibleTargets.firstOrNull()
-        }
         treeModel.reload()
-        status.text = statusText(total, failures, hiddenForks, hiddenNonOwned)
-        status.foreground = if (failures == 0) UIUtil.getContextHelpForeground() else UIUtil.getErrorForeground()
         syncButtons()
-    }
-
-    private fun showRepositorySelectionDialog(): Unit {
-        val dialog = RepositoryInclusionDialog(project, allTargets, inclusionState)
-        if (!dialog.showAndGet()) return
-
-        inclusionState = dialog.selectedState()
-        onInclusionChanged(inclusionState)
-        targets = inclusionState.includedTargets(allTargets)
-        selectedTarget = targets.firstOrNull() ?: allTargets.firstOrNull()
-        hasVisibleTargets = targets.isNotEmpty()
-        reloadIssues()
-    }
-
-    private fun showNoSelectedNodes(): Unit {
-        rootNode.removeAllChildren()
-        rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No repositories selected")))
-        treeModel.reload()
     }
 
     private fun handleSelection(path: TreePath?): Unit {
         val item = (path?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
         when (item) {
-            is RepoIssueTreeItem.Repository -> {
-                selectedTarget = item.target
-                selectedIssue = null
-                previewOpener.cancelPendingLoad()
-            }
             is RepoIssueTreeItem.Milestone -> {
-                selectedTarget = item.target
                 selectedIssue = null
                 previewOpener.cancelPendingLoad()
             }
             is RepoIssueTreeItem.SelectableIssue -> {
-                selectedTarget = item.target
                 selectedIssue = item.issue
                 previewOpener.openIssue(item.target, item.issue)
             }
@@ -316,10 +228,7 @@ internal class RepoIssuesTreePanel(
         syncButtons()
     }
 
-    private fun createIssueNode(
-        target: RepoIssueTarget,
-        row: IssueTreeGrouping.IssueRow
-    ): DefaultMutableTreeNode =
+    private fun createIssueNode(row: IssueTreeGrouping.IssueRow): DefaultMutableTreeNode =
         when (row) {
             is IssueTreeGrouping.IssueRow.Parent -> {
                 DefaultMutableTreeNode(RepoIssueTreeItem.ParentIssue(target, row.issue)).apply {
@@ -332,41 +241,22 @@ internal class RepoIssuesTreePanel(
                 DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, row.issue))
         }
 
-    private fun statusText(total: Int, failures: Int, hiddenForks: Int, hiddenNonOwned: Int): String =
-        listOfNotNull(
-            "$total open",
-            if (hiddenForks > 0) "$hiddenForks forks hidden" else null,
-            if (hiddenNonOwned > 0) "$hiddenNonOwned not owned hidden" else null,
-            if (failures > 0) "$failures failed" else null
-        ).joinToString(", ")
-
     private fun selectedSortOption(): IssueSortOption =
         sortBox.selectedItem as? IssueSortOption ?: IssueSortOption.UPDATED_DESC
 
     private fun syncButtons(): Unit {
         openIssueButton.isEnabled = selectedIssue != null
-        openRepoButton.isEnabled = hasVisibleTargets && selectedTarget?.issuesUrl?.isNotBlank() == true
     }
 
     private sealed interface RepoLoadResult {
         data class Loaded(
-            val target: RepoIssueTarget,
             val issues: List<Issue>,
             val milestones: List<IssueMilestone>,
             val relationships: List<IssueRelationship>
         ) : RepoLoadResult
 
         data class Failed(
-            val target: RepoIssueTarget,
             val message: String
-        ) : RepoLoadResult
-
-        data class HiddenFork(
-            val target: RepoIssueTarget
-        ) : RepoLoadResult
-
-        data class HiddenNotOwned(
-            val target: RepoIssueTarget
         ) : RepoLoadResult
     }
 }

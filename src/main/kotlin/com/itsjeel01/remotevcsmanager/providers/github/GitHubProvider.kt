@@ -111,23 +111,6 @@ class GitHubProvider(
             GitHubIssueStructureParser.toIssueRelationships(issue.number, jsonArray)
         }
 
-    suspend fun getIssueTrackingAccess(
-        owner: String,
-        repo: String,
-        accountLogins: Set<String>
-    ): GitHubIssueTrackingAccess {
-        val repository = apiClient.getRepository(owner, repo).getOrThrow()
-        val repositoryOwner = apiClient.safeObject(repository, "owner")?.let {
-            apiClient.safeString(it, "login")
-        }.orEmpty().lowercase()
-        val permissions = apiClient.safeObject(repository, "permissions")
-        val hasAdminPermission = permissions?.let { apiClient.safeBoolean(it, "admin") } ?: false
-        return GitHubIssueTrackingAccess(
-            owned = repositoryOwner in accountLogins || hasAdminPermission,
-            fork = apiClient.safeBoolean(repository, "fork")
-        )
-    }
-
     override suspend fun createIssue(
         owner: String, repo: String, title: String, body: String?,
         labels: List<String>?, assignees: List<String>?
@@ -332,8 +315,3 @@ class GitHubProvider(
         else -> PRState.OPEN
     }
 }
-
-data class GitHubIssueTrackingAccess(
-    val owned: Boolean,
-    val fork: Boolean
-)

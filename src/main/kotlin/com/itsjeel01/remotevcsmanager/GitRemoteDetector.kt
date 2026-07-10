@@ -31,7 +31,7 @@ class GitRemoteDetector(private val project: Project) {
         return detect(gitRoot)
     }
 
-    fun detect(gitRoot: File): GitRemoteInfo? {
+    private fun detect(gitRoot: File): GitRemoteInfo? {
         val remoteUrl = getRemoteUrl(gitRoot, "origin") ?: return null
         val parsed = parseRemoteUrl(remoteUrl) ?: return null
         val currentBranch = getCurrentBranch(gitRoot)
@@ -190,4 +190,3 @@ class GitRemoteDetector(private val project: Project) {
         }
     }
 }
-
