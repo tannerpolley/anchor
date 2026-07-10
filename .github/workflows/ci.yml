@@ -1,0 +1,69 @@
+name: Linux CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    name: Validate on Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify Linux Tooling
+        run: |
+          set -Eeuo pipefail
+          command -v bash
+          command -v jq
+          command -v shellcheck
+          command -v javac
+
+      - name: Check Bash Scripts
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/*.sh
+          shellcheck scripts/*.sh
+
+      - name: Test Repository Validators
+        run: |
+          set -Eeuo pipefail
+          ./scripts/test-validators.sh
+
+      - name: Run Tests
+        run: ./gradlew --no-daemon test
+
+      - name: Verify Plugin
+        run: ./gradlew --no-daemon verifyPlugin
+
+      - name: Build Plugin
+        run: ./gradlew --no-daemon buildPlugin

@@ -12,14 +12,26 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build-and-release:
     name: Build and Create Release
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -30,37 +42,41 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Validate Release Metadata
+        run: |
+          set -Eeuo pipefail
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          HEADER=$(grep -m 1 -F "## [$VERSION]" CHANGELOG.md || true)
+          if [[ $HEADER != "## [$VERSION]"* ]]; then
+            echo "::error::CHANGELOG.md has no exact heading for $VERSION"
+            exit 1
+          fi
+          CLEAN_HEADER=${HEADER#"## "}
+          ANCHOR=$(printf '%s' "$CLEAN_HEADER" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9_-]//g')
+          printf 'TAG_NAME=%s\n' "$TAG_NAME" >> "$GITHUB_ENV"
+          printf 'ANCHOR=%s\n' "$ANCHOR" >> "$GITHUB_ENV"
+
+      - name: Check Bash Scripts
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/*.sh
+          shellcheck scripts/*.sh
+          ./scripts/test-validators.sh
+
+      - name: Run Tests
+        run: ./gradlew --no-daemon test
+
+      - name: Verify Plugin
+        run: ./gradlew --no-daemon verifyPlugin
+
       - name: Build Plugin
-        # Generates the distributable ZIP
-        run: ./gradlew buildPlugin
+        run: ./gradlew --no-daemon buildPlugin
 
       - name: Publish to JetBrains Marketplace
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-        run: ./gradlew publishPlugin
-
-      - name: Extract Tag Name
-        id: extract_tag
-        # Strips 'refs/tags/' to get the clean tag name (e.g., v1.0.0-beta.2)
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: Generate Changelog Anchor
-        id: get_anchor
-        run: |
-          # 1. Strip the 'v' to match your changelog format (e.g., 1.0.0-beta.2)
-          VERSION="${TAG_NAME#v}"
-          
-          # 2. Find the exact line in CHANGELOG.md starting with "## [VERSION]"
-          HEADER=$(grep -E "^## \[$VERSION\]" CHANGELOG.md | head -n 1)
-          
-          # 3. Strip the leading "## "
-          CLEAN_HEADER=$(echo "$HEADER" | sed 's/^## //')
-          
-          # 4. Mimic GitHub's anchor parsing: lowercase, spaces to hyphens, strip punctuation
-          ANCHOR=$(echo "$CLEAN_HEADER" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9_-]//g')
-          
-          # 5. Save the anchor to the environment
-          echo "ANCHOR=$ANCHOR" >> $GITHUB_ENV
+        run: ./gradlew --no-daemon publishPlugin
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
