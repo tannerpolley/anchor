@@ -20,6 +20,19 @@ internal class IssueEditorPreviewOpener(
     private val requests = AtomicLong()
 
     fun openIssue(target: RepoIssueTarget, issue: Issue): Unit {
+        loadIssue(target, issue, openPreview = true, fetchLatest = false)
+    }
+
+    fun refreshIssue(target: RepoIssueTarget, issue: Issue): Unit {
+        loadIssue(target, issue, openPreview = false, fetchLatest = true)
+    }
+
+    private fun loadIssue(
+        target: RepoIssueTarget,
+        issue: Issue,
+        openPreview: Boolean,
+        fetchLatest: Boolean
+    ): Unit {
         val requestId = requests.incrementAndGet()
         val file = AnchorIssueVirtualFile(
             provider = issue.provider,
@@ -28,17 +41,28 @@ internal class IssueEditorPreviewOpener(
             issueNumber = issue.number,
             title = issue.title
         )
-        AnchorIssuePreviewStore.put(file, loadingPayload(issue))
-        openPreviewFile(file)
+        if (openPreview) {
+            AnchorIssuePreviewStore.put(file, loadingPayload(issue))
+            openPreviewFile(file)
+        }
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val result = runCatching {
                 runBlocking {
                     val context = "${target.owner}/${target.repoName}"
-                    val comments = provider.getIssueComments(target.owner, target.repoName, issue.number)
-                    val body = renderMarkdown(issue.body.orEmpty(), context)
+                    val currentIssue = if (fetchLatest) {
+                        provider.getIssue(target.owner, target.repoName, issue.number)
+                    } else {
+                        issue
+                    }
+                    val comments = provider.getIssueComments(
+                        target.owner,
+                        target.repoName,
+                        currentIssue.number
+                    )
+                    val body = renderMarkdown(currentIssue.body.orEmpty(), context)
                     val renderedComments = comments.map { renderMarkdown(it.body, context) }
-                    IssueDetail(comments, body, renderedComments)
+                    IssueDetail(currentIssue, comments, body, renderedComments)
                 }
             }
 
@@ -48,7 +72,12 @@ internal class IssueEditorPreviewOpener(
                     file,
                     result.fold(
                         onSuccess = { detail ->
-                            issuePayload(issue, detail.comments, detail.body, detail.renderedComments)
+                            issuePayload(
+                                detail.issue,
+                                detail.comments,
+                                detail.body,
+                                detail.renderedComments
+                            )
                         },
                         onFailure = { error ->
                             errorPayload(issue, error.message ?: "GitHub API request failed")
@@ -79,6 +108,7 @@ internal class IssueEditorPreviewOpener(
     }
 
     private data class IssueDetail(
+        val issue: Issue,
         val comments: List<IssueComment>,
         val body: String,
         val renderedComments: List<String>

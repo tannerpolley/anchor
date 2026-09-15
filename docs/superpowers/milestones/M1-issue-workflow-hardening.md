@@ -12,15 +12,18 @@ Make Anchor's issue workflow reliable for the current project repository. This m
 
 - [Issue editor preview design](../specs/2026-06-26-issue-editor-preview-design.md)
 - [Single-repository issue navigator design](../specs/2026-07-10-single-repository-issue-navigator-design.md)
+- [Native issue dependencies and reliable refresh](../specs/2026-09-15-native-issue-dependency-refresh-design.md)
 
 ## Related Plans
 
 - [Issue editor preview plan](../plans/2026-06-26-m1-issue-editor-preview-plan.md)
 - [Single-repository issue navigator plan](../plans/2026-07-10-m1-single-repository-issue-navigator-plan.md)
+- [Native issue dependencies and reliable refresh plan](../plans/2026-09-15-m1-native-issue-dependency-refresh-plan.md)
 
 ## Open Issues
 
 - [#1 Render GitHub issues in editor preview and group by milestone](../issues/1-render-github-issues-in-editor-preview-and-group-by-milestone.md)
+- [#7 Show native issue blockers and refresh Anchor reliably](../issues/7-show-native-issue-blockers-and-refresh-anchor-reliably.md)
 
 ## Success Criteria
 
@@ -29,3 +32,4 @@ Make Anchor's issue workflow reliable for the current project repository. This m
 - Issue detail content renders GitHub Markdown without forcing browser sign-in.
 - JCEF rendering and Compose detail rendering have clear ownership and validation paths.
 - Targeted tests cover primary-repository detection, issue grouping, and editor-preview behavior.
+- Native blockers and their states remain visible while refresh preserves usable navigator state.

@@ -51,7 +51,7 @@ class RemoteVcsSettingsPanel {
         font = JBUI.Fonts.smallFont()
         foreground = UIUtil.getContextHelpForeground()
     }
-    private val autoRefreshCb = JCheckBox("Auto-refresh on project open", true)
+    private val autoRefreshCb = JCheckBox("Auto-refresh issues while Anchor is visible", true)
 
     private var validateCallback: (() -> Unit)? = null
 

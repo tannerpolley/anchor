@@ -343,6 +343,38 @@ class GitHubApiClient(
         return Result.success(subIssues)
     }
 
+    fun getIssue(owner: String, repo: String, issueNumber: Int): Result<JsonObject> {
+        val request = buildGetRequest(
+            "/repos/${encodePath(owner)}/${encodePath(repo)}/issues/$issueNumber"
+        )
+        return executeRequest(request).map { body ->
+            parseJson(body).asJsonObject
+        }
+    }
+
+    fun getBlockedBy(owner: String, repo: String, issueNumber: Int): Result<List<JsonObject>> {
+        val dependencies = mutableListOf<JsonObject>()
+        var page = 1
+
+        while (true) {
+            val path = "/repos/${encodePath(owner)}/${encodePath(repo)}/issues/$issueNumber" +
+                "/dependencies/blocked_by?per_page=100&page=$page"
+            val result = executeRequest(buildGetRequest(path))
+            if (result.isFailure) {
+                return Result.failure(
+                    result.exceptionOrNull() ?: Exception("Failed to fetch issue dependencies")
+                )
+            }
+
+            val pageDependencies = parseJson(result.getOrNull().orEmpty()).asJsonArray
+            if (pageDependencies.size() == 0) break
+            pageDependencies.forEach { dependencies.add(it.asJsonObject) }
+            page += 1
+        }
+
+        return Result.success(dependencies)
+    }
+
     /**
      * Create an issue.
      */

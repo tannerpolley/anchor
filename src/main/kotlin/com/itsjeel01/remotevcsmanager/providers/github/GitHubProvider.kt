@@ -4,6 +4,7 @@ import com.itsjeel01.remotevcsmanager.models.CommitSummary
 import com.itsjeel01.remotevcsmanager.models.GitBranch
 import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueComment
+import com.itsjeel01.remotevcsmanager.models.IssueDependency
 import com.itsjeel01.remotevcsmanager.models.IssueMilestone
 import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 import com.itsjeel01.remotevcsmanager.models.IssueState
@@ -111,6 +112,20 @@ class GitHubProvider(
             GitHubIssueStructureParser.toIssueRelationships(issue.number, jsonArray)
         }
 
+    suspend fun getIssue(owner: String, repo: String, issueNumber: Int): Issue =
+        toIssue(apiClient.getIssue(owner, repo, issueNumber).getOrThrow())
+
+    suspend fun getIssueDependencies(
+        owner: String,
+        repo: String,
+        issues: List<Issue>
+    ): List<IssueDependency> =
+        issues.flatMap { issue ->
+            apiClient.getBlockedBy(owner, repo, issue.number)
+                .getOrThrow()
+                .map { blocker -> toIssueDependency(issue.number, blocker) }
+        }
+
     override suspend fun createIssue(
         owner: String, repo: String, title: String, body: String?,
         labels: List<String>?, assignees: List<String>?
@@ -143,23 +158,18 @@ class GitHubProvider(
     }
 
     override suspend fun getIssueComments(owner: String, repo: String, issueNumber: Int): List<IssueComment> {
-        val cacheKey = "comments_${owner}_${repo}_$issueNumber"
-        val cached: List<IssueComment>? = VcsCache.getApi(cacheKey)
-        if (cached != null) return cached
-        val result = apiClient.getIssueComments(owner, repo, issueNumber)
+        return apiClient.getIssueComments(owner, repo, issueNumber)
             .getOrThrow()
             .map { json ->
-            val user = apiClient.safeObject(json, "user")
-            IssueComment(
-                id = apiClient.safeLong(json, "id").toString(),
-                body = apiClient.safeString(json, "body") ?: "",
-                author = if (user != null) apiClient.safeString(user, "login") ?: "unknown" else "unknown",
-                createdAt = apiClient.safeString(json, "created_at") ?: "",
-                updatedAt = apiClient.safeString(json, "updated_at") ?: ""
-            )
-        }
-        VcsCache.putApi(cacheKey, result)
-        return result
+                val user = apiClient.safeObject(json, "user")
+                IssueComment(
+                    id = apiClient.safeLong(json, "id").toString(),
+                    body = apiClient.safeString(json, "body") ?: "",
+                    author = user?.let { apiClient.safeString(it, "login") } ?: "unknown",
+                    createdAt = apiClient.safeString(json, "created_at") ?: "",
+                    updatedAt = apiClient.safeString(json, "updated_at") ?: ""
+                )
+            }
     }
 
     override suspend fun getBranches(owner: String, repo: String): List<GitBranch> {
@@ -308,6 +318,14 @@ class GitHubProvider(
             milestone = milestone
         )
     }
+
+    internal fun toIssueDependency(
+        blockedIssueNumber: Int,
+        json: com.google.gson.JsonObject
+    ): IssueDependency = GitHubIssueStructureParser.toIssueDependency(
+        blockedIssueNumber = blockedIssueNumber,
+        blockingIssue = toIssue(json)
+    )
 
     private fun parsePRState(state: String, merged: Boolean): PRState = when {
         merged -> PRState.MERGED

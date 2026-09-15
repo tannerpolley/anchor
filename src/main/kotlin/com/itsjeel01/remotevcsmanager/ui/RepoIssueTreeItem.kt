@@ -1,6 +1,7 @@
 package com.itsjeel01.remotevcsmanager.ui
 
 import com.itsjeel01.remotevcsmanager.models.Issue
+import com.itsjeel01.remotevcsmanager.models.IssueDependency
 
 internal sealed interface RepoIssueTreeItem {
     sealed interface SelectableIssue : RepoIssueTreeItem {
@@ -22,6 +23,10 @@ internal sealed interface RepoIssueTreeItem {
         override val target: RepoIssueTarget,
         override val issue: Issue
     ) : SelectableIssue
+
+    data class Dependency(
+        val dependency: IssueDependency
+    ) : RepoIssueTreeItem
 
     data class Milestone(
         val target: RepoIssueTarget,
