@@ -5,6 +5,15 @@ All notable changes to Anchor — Remote VCS for JetBrains are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.6] - 2026-09-16
+
+### Changed
+
+- Replace blocker child rows with one inline red status marker on blocked issues.
+- Show blocker details in the issue tooltip without adding tree hierarchy.
+
+---
+
 ## [1.0.0-beta.5] - 2026-09-16
 
 ### Added
@@ -153,3 +162,4 @@ First public beta. Core GitHub workflow inside any JetBrains IDE.
 [1.0.0-beta.3]: https://github.com/alph-a07/anchor/releases/tag/v1.0.0-beta.3
 [1.0.0-beta.4]: https://github.com/alph-a07/anchor/releases/tag/v1.0.0-beta.4
 [1.0.0-beta.5]: https://github.com/tannerpolley/anchor/releases/tag/v1.0.0-beta.5
+[1.0.0-beta.6]: https://github.com/tannerpolley/anchor/releases/tag/v1.0.0-beta.6
