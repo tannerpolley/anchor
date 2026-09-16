@@ -16,6 +16,7 @@ import com.itsjeel01.remotevcsmanager.models.Issue
 import com.itsjeel01.remotevcsmanager.models.IssueDependency
 import com.itsjeel01.remotevcsmanager.models.IssueMilestone
 import com.itsjeel01.remotevcsmanager.models.IssueRelationship
+import com.itsjeel01.remotevcsmanager.models.IssueState
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
 import com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState
 import com.itsjeel01.remotevcsmanager.settings.SettingsChangeNotifier
@@ -253,7 +254,9 @@ internal class RepoIssuesTreePanel(
             issues = result.issues,
             relationships = result.relationships
         )
-        val dependenciesByIssue = result.dependencies.groupBy { it.blockedIssueNumber }
+        val openBlockersByIssue = result.dependencies
+            .filter { it.blockingIssue.state == IssueState.OPEN }
+            .groupBy({ it.blockedIssueNumber }, { it.blockingIssue })
         if (groups.isEmpty()) {
             rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
         } else {
@@ -269,7 +272,7 @@ internal class RepoIssuesTreePanel(
                     milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
                 } else {
                     milestone.rows.forEach { row ->
-                        milestoneNode.add(createIssueNode(row, dependenciesByIssue))
+                        milestoneNode.add(createIssueNode(row, openBlockersByIssue))
                     }
                 }
                 rootNode.add(milestoneNode)
@@ -320,34 +323,39 @@ internal class RepoIssuesTreePanel(
 
     private fun createIssueNode(
         row: IssueTreeGrouping.IssueRow,
-        dependenciesByIssue: Map<Int, List<IssueDependency>>
+        openBlockersByIssue: Map<Int, List<Issue>>
     ): DefaultMutableTreeNode =
         when (row) {
             is IssueTreeGrouping.IssueRow.Parent -> {
-                DefaultMutableTreeNode(RepoIssueTreeItem.ParentIssue(target, row.issue)).apply {
-                    addDependencies(this, row.issue.number, dependenciesByIssue)
+                DefaultMutableTreeNode(
+                    RepoIssueTreeItem.ParentIssue(
+                        target,
+                        row.issue,
+                        openBlockersByIssue[row.issue.number].orEmpty()
+                    )
+                ).apply {
                     row.children.forEach { child ->
-                        val childNode = DefaultMutableTreeNode(RepoIssueTreeItem.SubIssue(target, child))
-                        addDependencies(childNode, child.number, dependenciesByIssue)
-                        add(childNode)
+                        add(
+                            DefaultMutableTreeNode(
+                                RepoIssueTreeItem.SubIssue(
+                                    target,
+                                    child,
+                                    openBlockersByIssue[child.number].orEmpty()
+                                )
+                            )
+                        )
                     }
                 }
             }
             is IssueTreeGrouping.IssueRow.Standalone ->
-                DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, row.issue)).apply {
-                    addDependencies(this, row.issue.number, dependenciesByIssue)
-                }
+                DefaultMutableTreeNode(
+                    RepoIssueTreeItem.StandaloneIssue(
+                        target,
+                        row.issue,
+                        openBlockersByIssue[row.issue.number].orEmpty()
+                    )
+                )
         }
-
-    private fun addDependencies(
-        node: DefaultMutableTreeNode,
-        issueNumber: Int,
-        dependenciesByIssue: Map<Int, List<IssueDependency>>
-    ): Unit {
-        dependenciesByIssue[issueNumber].orEmpty().forEach { dependency ->
-            node.add(DefaultMutableTreeNode(RepoIssueTreeItem.Dependency(dependency)))
-        }
-    }
 
     private fun selectedSortOption(): IssueSortOption =
         sortBox.selectedItem as? IssueSortOption ?: IssueSortOption.UPDATED_DESC

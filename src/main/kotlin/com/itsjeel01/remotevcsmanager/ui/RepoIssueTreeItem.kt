@@ -1,32 +1,31 @@
 package com.itsjeel01.remotevcsmanager.ui
 
 import com.itsjeel01.remotevcsmanager.models.Issue
-import com.itsjeel01.remotevcsmanager.models.IssueDependency
 
 internal sealed interface RepoIssueTreeItem {
     sealed interface SelectableIssue : RepoIssueTreeItem {
         val target: RepoIssueTarget
         val issue: Issue
+        val openBlockers: List<Issue>
     }
 
     data class ParentIssue(
         override val target: RepoIssueTarget,
-        override val issue: Issue
+        override val issue: Issue,
+        override val openBlockers: List<Issue>
     ) : SelectableIssue
 
     data class SubIssue(
         override val target: RepoIssueTarget,
-        override val issue: Issue
+        override val issue: Issue,
+        override val openBlockers: List<Issue>
     ) : SelectableIssue
 
     data class StandaloneIssue(
         override val target: RepoIssueTarget,
-        override val issue: Issue
+        override val issue: Issue,
+        override val openBlockers: List<Issue>
     ) : SelectableIssue
-
-    data class Dependency(
-        val dependency: IssueDependency
-    ) : RepoIssueTreeItem
 
     data class Milestone(
         val target: RepoIssueTarget,
