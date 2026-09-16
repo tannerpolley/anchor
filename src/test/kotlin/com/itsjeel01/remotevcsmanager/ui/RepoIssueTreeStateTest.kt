@@ -33,7 +33,9 @@ class RepoIssueTreeStateTest {
     private fun tree(target: RepoIssueTarget, issue: Issue): TreeFixture {
         val root = DefaultMutableTreeNode("root")
         val milestone = DefaultMutableTreeNode(RepoIssueTreeItem.Milestone(target, "M1", 1))
-        val issueNode = DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, issue))
+        val issueNode = DefaultMutableTreeNode(
+            RepoIssueTreeItem.StandaloneIssue(target, issue, emptyList())
+        )
         issueNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("child")))
         milestone.add(issueNode)
         root.add(milestone)
