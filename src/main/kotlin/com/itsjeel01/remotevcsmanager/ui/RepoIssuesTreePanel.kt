@@ -1,8 +1,11 @@
 package com.itsjeel01.remotevcsmanager.ui
 
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.IdeFrame
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
@@ -10,14 +13,18 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.itsjeel01.remotevcsmanager.models.Issue
+import com.itsjeel01.remotevcsmanager.models.IssueDependency
 import com.itsjeel01.remotevcsmanager.models.IssueMilestone
 import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 import com.itsjeel01.remotevcsmanager.providers.github.GitHubProvider
+import com.itsjeel01.remotevcsmanager.settings.RemoteVcsSettingsState
+import com.itsjeel01.remotevcsmanager.settings.SettingsChangeNotifier
 import com.itsjeel01.remotevcsmanager.ui.editor.IssueEditorPreviewOpener
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.FlowLayout
 import java.awt.Font
+import java.awt.event.HierarchyEvent
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.BoxLayout
 import javax.swing.JButton
@@ -25,6 +32,7 @@ import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
@@ -42,15 +50,26 @@ internal class RepoIssuesTreePanel(
     private val tree = Tree(treeModel)
     private val status = JBLabel()
     private val sortBox = JComboBox<IssueSortOption>(IssueSortOption.entries.toTypedArray())
+    private val refreshButton = JButton("Refresh")
     private val openIssueButton = JButton("Open Issue")
     private val openRepoButton = JButton("Open Repo")
     private val treeRequests = AtomicLong()
+    private val settings = RemoteVcsSettingsState.getInstance()
+    private val autoRefreshTimer = Timer(AUTO_REFRESH_INTERVAL_MS) {
+        if (component.isShowing) reloadIssues(automatic = true)
+    }
+    private var hasTreeData = false
+    private var isRefreshing = false
+    private var restoringTreeState = false
+    private var lastRefreshAttempt = 0L
+    private var lastSuccessfulRefresh: String? = null
     private var selectedIssue: Issue? = null
 
     val component: JComponent = createComponent()
 
     init {
         configureTree()
+        configureAutoRefresh()
         reloadIssues()
     }
 
@@ -78,7 +97,7 @@ internal class RepoIssuesTreePanel(
         val actionsRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
             alignmentX = Component.LEFT_ALIGNMENT
         }
-        val refresh = JButton("Refresh").apply {
+        refreshButton.apply {
             addActionListener { reloadIssues() }
         }
         openIssueButton.apply {
@@ -98,7 +117,7 @@ internal class RepoIssuesTreePanel(
         sortRow.add(status)
         sortRow.add(JBLabel("Sort:"))
         sortRow.add(sortBox)
-        actionsRow.add(refresh)
+        actionsRow.add(refreshButton)
         actionsRow.add(openIssueButton)
         actionsRow.add(openRepoButton)
         header.add(sortRow)
@@ -117,15 +136,52 @@ internal class RepoIssuesTreePanel(
         }
     }
 
-    private fun reloadIssues(): Unit {
+    private fun configureAutoRefresh(): Unit {
+        component.addHierarchyListener { event ->
+            if (
+                event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L &&
+                component.isShowing
+            ) {
+                reloadIssues(automatic = true)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(project).apply {
+            subscribe(
+                ApplicationActivationListener.TOPIC,
+                object : ApplicationActivationListener {
+                    override fun applicationActivated(ideFrame: IdeFrame): Unit {
+                        if (ideFrame.project == project && component.isShowing) {
+                            reloadIssues(automatic = true)
+                        }
+                    }
+                }
+            )
+            subscribe(
+                SettingsChangeNotifier.SETTINGS_CHANGED,
+                SettingsChangeNotifier.SettingsChangeListener {
+                    if (component.isShowing) reloadIssues(automatic = true)
+                }
+            )
+        }
+        autoRefreshTimer.start()
+        Disposer.register(project) { autoRefreshTimer.stop() }
+    }
+
+    private fun reloadIssues(automatic: Boolean = false): Unit {
+        val now = System.currentTimeMillis()
+        if (automatic && !settings.getAutoRefresh()) return
+        if (automatic && now - lastRefreshAttempt < AUTO_REFRESH_THROTTLE_MS) return
+        if (isRefreshing) return
+
+        isRefreshing = true
+        lastRefreshAttempt = now
         val requestId = treeRequests.incrementAndGet()
         val sortOption = selectedSortOption()
-        previewOpener.cancelPendingLoad()
-        selectedIssue = null
         syncButtons()
-        status.text = "Loading..."
+        status.text = lastSuccessfulRefresh?.let { "Refreshing... · Last updated $it" } ?: "Loading..."
         status.foreground = UIUtil.getContextHelpForeground()
-        showLoadingNode()
+        status.toolTipText = null
+        if (!hasTreeData) showLoadingNode()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val result = runCatching {
@@ -146,10 +202,16 @@ internal class RepoIssuesTreePanel(
                         repo = target.repoName,
                         issues = sortedIssues
                     )
+                    val dependencies = provider.getIssueDependencies(
+                        owner = target.owner,
+                        repo = target.repoName,
+                        issues = sortedIssues
+                    )
                     RepoLoadResult.Loaded(
                         issues = sortedIssues,
                         milestones = milestones,
-                        relationships = relationships
+                        relationships = relationships,
+                        dependencies = dependencies
                     )
                 }
             }.getOrElse { error ->
@@ -158,7 +220,22 @@ internal class RepoIssuesTreePanel(
 
             SwingUtilities.invokeLater {
                 if (project.isDisposed || treeRequests.get() != requestId) return@invokeLater
-                showIssueNodes(result)
+                isRefreshing = false
+                when (result) {
+                    is RepoLoadResult.Loaded -> {
+                        val treeState = RepoIssueTreeStateKeeper.capture(
+                            tree,
+                            rootNode,
+                            selectedIssue?.number
+                        )
+                        val selectedBeforeRefresh = selectedIssue
+                        lastSuccessfulRefresh = TimeFormat.now()
+                        showIssueNodes(result, treeState)
+                        selectedBeforeRefresh?.let { previewOpener.refreshIssue(target, it) }
+                    }
+                    is RepoLoadResult.Failed -> showRefreshFailure(result.message)
+                }
+                syncButtons()
             }
         }
     }
@@ -169,50 +246,63 @@ internal class RepoIssuesTreePanel(
         treeModel.reload()
     }
 
-    private fun showIssueNodes(result: RepoLoadResult): Unit {
+    private fun showIssueNodes(result: RepoLoadResult.Loaded, treeState: RepoIssueTreeState): Unit {
         rootNode.removeAllChildren()
-        when (result) {
-            is RepoLoadResult.Loaded -> {
-                val groups = IssueTreeGrouping.group(
-                    milestones = result.milestones,
-                    issues = result.issues,
-                    relationships = result.relationships
+        val groups = IssueTreeGrouping.group(
+            milestones = result.milestones,
+            issues = result.issues,
+            relationships = result.relationships
+        )
+        val dependenciesByIssue = result.dependencies.groupBy { it.blockedIssueNumber }
+        if (groups.isEmpty()) {
+            rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+        } else {
+            groups.forEach { milestone ->
+                val milestoneNode = DefaultMutableTreeNode(
+                    RepoIssueTreeItem.Milestone(
+                        target = target,
+                        title = milestone.title,
+                        openIssueCount = milestone.openIssueCount
+                    )
                 )
-                if (groups.isEmpty()) {
-                    rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
+                if (milestone.rows.isEmpty()) {
+                    milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
                 } else {
-                    groups.forEach { milestone ->
-                        val milestoneNode = DefaultMutableTreeNode(
-                            RepoIssueTreeItem.Milestone(
-                                target = target,
-                                title = milestone.title,
-                                openIssueCount = milestone.openIssueCount
-                            )
-                        )
-                        if (milestone.rows.isEmpty()) {
-                            milestoneNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message("No open issues")))
-                        } else {
-                            milestone.rows.forEach { row ->
-                                milestoneNode.add(createIssueNode(row))
-                            }
-                        }
-                        rootNode.add(milestoneNode)
+                    milestone.rows.forEach { row ->
+                        milestoneNode.add(createIssueNode(row, dependenciesByIssue))
                     }
                 }
-                status.text = "${result.issues.size} open"
-                status.foreground = UIUtil.getContextHelpForeground()
-            }
-            is RepoLoadResult.Failed -> {
-                rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message(result.message)))
-                status.text = "Failed"
-                status.foreground = UIUtil.getErrorForeground()
+                rootNode.add(milestoneNode)
             }
         }
+        hasTreeData = true
+        status.text = "${result.issues.size} open · Updated ${lastSuccessfulRefresh.orEmpty()}"
+        status.foreground = UIUtil.getContextHelpForeground()
+        status.toolTipText = null
         treeModel.reload()
-        syncButtons()
+        restoringTreeState = true
+        try {
+            selectedIssue = RepoIssueTreeStateKeeper.restore(tree, rootNode, treeState)
+        } finally {
+            restoringTreeState = false
+        }
+    }
+
+    private fun showRefreshFailure(message: String): Unit {
+        status.text = lastSuccessfulRefresh?.let {
+            "Refresh failed · Stale since $it"
+        } ?: "Refresh failed"
+        status.foreground = UIUtil.getErrorForeground()
+        status.toolTipText = message
+        if (!hasTreeData) {
+            rootNode.removeAllChildren()
+            rootNode.add(DefaultMutableTreeNode(RepoIssueTreeItem.Message(message)))
+            treeModel.reload()
+        }
     }
 
     private fun handleSelection(path: TreePath?): Unit {
+        if (restoringTreeState) return
         val item = (path?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
         when (item) {
             is RepoIssueTreeItem.Milestone -> {
@@ -228,35 +318,61 @@ internal class RepoIssuesTreePanel(
         syncButtons()
     }
 
-    private fun createIssueNode(row: IssueTreeGrouping.IssueRow): DefaultMutableTreeNode =
+    private fun createIssueNode(
+        row: IssueTreeGrouping.IssueRow,
+        dependenciesByIssue: Map<Int, List<IssueDependency>>
+    ): DefaultMutableTreeNode =
         when (row) {
             is IssueTreeGrouping.IssueRow.Parent -> {
                 DefaultMutableTreeNode(RepoIssueTreeItem.ParentIssue(target, row.issue)).apply {
+                    addDependencies(this, row.issue.number, dependenciesByIssue)
                     row.children.forEach { child ->
-                        add(DefaultMutableTreeNode(RepoIssueTreeItem.SubIssue(target, child)))
+                        val childNode = DefaultMutableTreeNode(RepoIssueTreeItem.SubIssue(target, child))
+                        addDependencies(childNode, child.number, dependenciesByIssue)
+                        add(childNode)
                     }
                 }
             }
             is IssueTreeGrouping.IssueRow.Standalone ->
-                DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, row.issue))
+                DefaultMutableTreeNode(RepoIssueTreeItem.StandaloneIssue(target, row.issue)).apply {
+                    addDependencies(this, row.issue.number, dependenciesByIssue)
+                }
         }
+
+    private fun addDependencies(
+        node: DefaultMutableTreeNode,
+        issueNumber: Int,
+        dependenciesByIssue: Map<Int, List<IssueDependency>>
+    ): Unit {
+        dependenciesByIssue[issueNumber].orEmpty().forEach { dependency ->
+            node.add(DefaultMutableTreeNode(RepoIssueTreeItem.Dependency(dependency)))
+        }
+    }
 
     private fun selectedSortOption(): IssueSortOption =
         sortBox.selectedItem as? IssueSortOption ?: IssueSortOption.UPDATED_DESC
 
     private fun syncButtons(): Unit {
         openIssueButton.isEnabled = selectedIssue != null
+        refreshButton.isEnabled = !isRefreshing
+        sortBox.isEnabled = !isRefreshing
     }
 
     private sealed interface RepoLoadResult {
         data class Loaded(
             val issues: List<Issue>,
             val milestones: List<IssueMilestone>,
-            val relationships: List<IssueRelationship>
+            val relationships: List<IssueRelationship>,
+            val dependencies: List<IssueDependency>
         ) : RepoLoadResult
 
         data class Failed(
             val message: String
         ) : RepoLoadResult
+    }
+
+    companion object {
+        private const val AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000
+        private const val AUTO_REFRESH_THROTTLE_MS = 60 * 1000
     }
 }

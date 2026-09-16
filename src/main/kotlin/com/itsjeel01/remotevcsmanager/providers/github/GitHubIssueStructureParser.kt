@@ -5,6 +5,8 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.itsjeel01.remotevcsmanager.models.IssueMilestone
+import com.itsjeel01.remotevcsmanager.models.Issue
+import com.itsjeel01.remotevcsmanager.models.IssueDependency
 import com.itsjeel01.remotevcsmanager.models.IssueRelationship
 
 internal object GitHubIssueStructureParser {
@@ -26,6 +28,12 @@ internal object GitHubIssueStructureParser {
                 childIssueNumber = childNumber
             )
         }
+
+    fun toIssueDependency(blockedIssueNumber: Int, blockingIssue: Issue): IssueDependency =
+        IssueDependency(
+            blockedIssueNumber = blockedIssueNumber,
+            blockingIssue = blockingIssue
+        )
 
     private fun JsonElement.asObjectOrNull(): JsonObject? =
         if (this is JsonNull || !isJsonObject) null else asJsonObject

@@ -5,6 +5,23 @@ All notable changes to Anchor — Remote VCS for JetBrains are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.5] - 2026-09-16
+
+### Added
+
+- Show native GitHub blocked-by relationships beneath their issues.
+
+### Changed
+
+- Refresh issues when Anchor opens, becomes visible, regains IDE focus, or reaches the visible auto-refresh interval.
+- Preserve issue selection, expansion, and the last successful tree while refreshing.
+
+### Fixed
+
+- Revalidate the selected issue preview and comments without opening duplicate editor tabs.
+
+---
+
 ## [1.0.0-beta.4] - 2026-06-11
 
 ### Added
@@ -135,3 +152,4 @@ First public beta. Core GitHub workflow inside any JetBrains IDE.
 [1.0.0-beta.2]: https://github.com/alph-a07/anchor/releases/tag/v1.0.0-beta.2
 [1.0.0-beta.3]: https://github.com/alph-a07/anchor/releases/tag/v1.0.0-beta.3
 [1.0.0-beta.4]: https://github.com/alph-a07/anchor/releases/tag/v1.0.0-beta.4
+[1.0.0-beta.5]: https://github.com/tannerpolley/anchor/releases/tag/v1.0.0-beta.5

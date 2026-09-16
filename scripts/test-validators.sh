@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 repo_root=$(git rev-parse --show-toplevel)
+mkdir -p "$repo_root/build"
 tmp_dir=$(mktemp -d "$repo_root/build/validator-tests.XXXXXX")
 issue_tmp=$(mktemp -d "$repo_root/docs/superpowers/issues/.validator-tests.XXXXXX")
 
